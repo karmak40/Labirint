@@ -65,6 +65,10 @@ func _ready() -> void:
 		_add_vein(spot, "ore")
 	for spot in map.gold_positions:
 		_add_vein(spot, "gold")
+	for spot in map.boulder_positions:
+		var rock := Boulder.new()
+		rock.position = spot
+		add_child(rock)
 	for layout in map.sides():
 		_set_up_side(layout)
 	if game != null:

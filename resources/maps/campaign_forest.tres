@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="MapData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/map_data.gd" id="MapScript"]
+[ext_resource type="Script" path="res://scripts/side_layout.gd" id="SideScript"]
+
+[sub_resource type="Resource" id="PlayerSide"]
+script = ExtResource("SideScript")
+team = 1
+base = Vector2(190, 300)
+barracks = Vector2(460, 130)
+stockpile = Vector2(470, 390)
+towers = Array[Vector2]([])
+rally = Vector2(620, 300)
+start_workers = PackedStringArray()
+start_stock = {
+"ore": 60,
+"wood": 60
+}
+
+[sub_resource type="Resource" id="EnemySide"]
+script = ExtResource("SideScript")
+team = 2
+base = Vector2(2810, 300)
+barracks = Vector2(2540, 130)
+stockpile = Vector2(2530, 390)
+towers = Array[Vector2]([])
+rally = Vector2(2380, 300)
+start_workers = PackedStringArray()
+start_stock = {
+"ore": 60,
+"wood": 60
+}
+
+[resource]
+script = ExtResource("MapScript")
+title = "Лесной рубеж"
+floor_size = Vector2(3000, 560)
+tree_positions = Array[Vector2]([Vector2(540, 548), Vector2(598, 512), Vector2(620, 478), Vector2(656, 548), Vector2(714, 512), Vector2(772, 548), Vector2(794, 478), Vector2(830, 512), Vector2(888, 548), Vector2(946, 512), Vector2(968, 478), Vector2(1004, 548), Vector2(1062, 512), Vector2(1120, 548), Vector2(1142, 478), Vector2(1178, 512), Vector2(1236, 548), Vector2(1294, 512), Vector2(1316, 478), Vector2(1352, 548), Vector2(1410, 512), Vector2(2460, 548), Vector2(2402, 512), Vector2(2380, 478), Vector2(2344, 548), Vector2(2286, 512), Vector2(2228, 548), Vector2(2206, 478), Vector2(2170, 512), Vector2(2112, 548), Vector2(2054, 512), Vector2(2032, 478), Vector2(1996, 548), Vector2(1938, 512), Vector2(1880, 548), Vector2(1858, 478), Vector2(1822, 512), Vector2(1764, 548), Vector2(1706, 512), Vector2(1684, 478), Vector2(1648, 548), Vector2(1590, 512), Vector2(1470, 540), Vector2(1500, 505), Vector2(1530, 545)])
+vein_positions = Array[Vector2]([Vector2(700, 140), Vector2(900, 245), Vector2(2300, 140), Vector2(2100, 245), Vector2(1500, 250)])
+gold_positions = Array[Vector2]([Vector2(1380, 160), Vector2(1620, 160)])
+ore_rocks = 20
+ore_rock_worth = 10
+gold_rocks = 10
+gold_rock_worth = 10
+tree_logs = 10
+log_worth = 5
+regrow_time = 90.0
+refill_time = 0.0
+player = SubResource("PlayerSide")
+enemy = SubResource("EnemySide")

@@ -9,6 +9,8 @@ extends Resource
 @export var tree_positions: Array[Vector2] = []
 @export var vein_positions: Array[Vector2] = []
 @export var gold_positions: Array[Vector2] = []
+## Great rocks that nothing can be done with but walk round: walls of a gorge.
+@export var boulder_positions: Array[Vector2] = []
 ## How long a felled tree takes to grow back, and a spent seam to refill; 0 is never.
 ## How rich the seams are and how much a tree gives: rocks per seam, each rock's
 ## worth, beams per tree.

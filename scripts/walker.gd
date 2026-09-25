@@ -355,6 +355,7 @@ const ARROW_DRAG := 30.0
 const ARROW_CARRY := 0.15          # share of the archer's own momentum
 const ARROW_MAX := 10              # oldest ones are dropped, so they cannot pile up
 const ARROW_REACH := 22.0          # how near it has to pass to find a body
+const AIM_SHARE := 0.6             # an aimed shot goes out a little softer, to arc onto its mark
 const ARROW_HEAD_LENGTH := 7.0
 const ARROW_SHAFT_COLOR := Color(0.72, 0.62, 0.45)
 const ARROW_FLETCH_COLOR := Color(0.85, 0.35, 0.30)
@@ -2254,6 +2255,8 @@ func _release_arrow(speed: float = ARROW_SPEED, harm: float = -1.0) -> void:
 	arrow.z = maxf(0.0, -grip.y)
 	arrow.vel = Vector2(dir.x * speed, 0.0) + player.velocity * ARROW_CARRY
 	arrow.z_vel = -dir.y * speed
+	if player.aim_point != Vector2.INF:
+		_aim_arrow(arrow, player.aim_point, speed)
 	arrow.angle = dir.angle()
 	# what it will do is settled as it leaves, by whatever loosed it
 	arrow.harm = harm if harm >= 0.0 else PlayerBody.STRIKE_HARM[player.weapon]
@@ -2261,6 +2264,22 @@ func _release_arrow(speed: float = ARROW_SPEED, harm: float = -1.0) -> void:
 	arrows.append(arrow)
 	if arrows.size() > ARROW_MAX:
 		arrows.pop_front()
+
+## Sends a shot at a point on the floor instead of straight ahead: across the
+## field towards it, and lofted just enough to come down there. Drag and gravity
+## are the arrow's own, so it is the same shaft on the same arc as any other --
+## only pointed.
+func _aim_arrow(arrow: Arrow, at: Vector2, speed: float) -> void:
+	var toward := at - arrow.pos
+	var reach := toward.length()
+	if reach < 1.0:
+		return
+	var flat := speed * AIM_SHARE
+	arrow.vel = toward / reach * flat
+	# how long it is in the air, allowing for the drag that slows it
+	var flight := reach / maxf(flat - ARROW_DRAG * reach / flat * 0.5, flat * 0.5)
+	arrow.z_vel = (0.5 * ARROW_GRAVITY * flight * flight - arrow.z) / flight
+	arrow.angle = Vector2(arrow.vel.x, -arrow.z_vel).angle()
 
 ## A cast bolt: it flies flat at the height it left the stone, finds whatever it
 ## passes through, and burns out on its own if it finds nothing.

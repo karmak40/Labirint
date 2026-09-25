@@ -3,38 +3,36 @@ extends Node
 ## The enemy's head: a side run by a loop of decisions instead of by a person.
 ##
 ## It never touches the field. Every order it gives is one of GameState's
-## commands, the same ones the HUD sends for the human -- hire, send the army,
-## call it back -- and what it knows about the other side it learns by looking
-## at what is standing on the field, the same way anyone would. That is what
-## would let a remote player take its place without anything below it changing.
+## commands, the same ones the HUD sends for the human -- hire, build, learn,
+## send the army, call it back -- and what it knows about the other side it
+## learns by looking at what is standing on the field, the same way anyone
+## would. That is what would let a remote player take its place without
+## anything below it changing.
 ##
-## The plan is deliberately plain: keep enough hands on wood and ore, build
-## soldiers, go when the wave is big enough, fall back when it is spent and make
-## the next one bigger, and turn out to meet anyone who comes too close to home.
-## Its only randomness is in when it thinks, so two directors do not act in step.
+## How it plays is its plan (AIProfile): a strategy -- rush with cheap troops,
+## sit tight behind towers and bows, learn everything first, or a bit of each --
+## shaped by a difficulty. The loop is the same for all of them: keep enough
+## hands on each trade, save up for the library and the next study, put up
+## towers, build soldiers to the mix it likes, go when the wave is big enough
+## (and the plan says it is time), fall back when it is spent and make the next
+## one bigger, and turn out to meet anyone who comes too close to home. Its
+## only randomness is in when it thinks, and in which strategy "random" picks.
 
-const THINK_EVERY := 2.0
 const THINK_JITTER := 0.4
-const WORKERS_FIRST := {"wood": 2, "ore": 2}   ## before any soldier is hired
-const WORKERS_FULL := {"wood": 5, "ore": 3}    ## what it builds up to: beams are slow to carry, so more on wood
 const TRADE_KIND := {"wood": "woodcutter", "ore": "miner", "gold": "gold_miner"}
-const GOLD_HANDS := 1          ## one on gold once the first wave is out: knights need learning
-const FIRST_WAVE := 4
-const WAVE_GROWTH := 2
-const WAVE_MAX := 12
-const SPENT_AT := 1            ## a wave down to this many goes home
-const HOME_GUARD := 260.0      ## how near the keep an enemy has to come to be met
-const HIRES_PER_THOUGHT := 2
-const COUNTER_SHARE := 0.5     ## after beating off an attack, go back at them with this share of a wave
-const STUDIES := ["chivalry", "forging", "mail"]   ## what it learns, in this order
-const TOWERS_WANTED := 2
+
+## Which way it plays and how well (AIProfile). Set before it is added.
+var strategy := "balanced"
+var difficulty := "normal"
+## Everything it decides by, from the profile: see AIProfile.STRATEGIES.
+var plan := {}
 
 var team: int = Team.Id.ENEMY
 ## GameState, looked up rather than named: it is GameState that makes directors,
 ## so naming it here would have each waiting on the other to exist first.
 var game: Node
 var think_left := 0.0
-var wave_size := FIRST_WAVE
+var wave_size := 4
 var wave: Array[Unit] = []     ## the soldiers sent in the current attack
 var attacking := false
 var defending := false
@@ -43,7 +41,11 @@ func _ready() -> void:
 	var side := get_parent() as PlayerState
 	if side != null:
 		team = side.team
-	think_left = randf() * THINK_EVERY
+	plan = AIProfile.make(strategy, difficulty)
+	strategy = plan["strategy"]
+	difficulty = plan["difficulty"]
+	wave_size = int(plan["first_wave"])
+	think_left = randf() * float(plan["think"])
 	game = get_node_or_null("/root/GameState")
 
 func _physics_process(delta: float) -> void:
@@ -51,7 +53,7 @@ func _physics_process(delta: float) -> void:
 		return
 	think_left -= delta
 	if think_left <= 0.0:
-		think_left = THINK_EVERY + randf_range(-THINK_JITTER, THINK_JITTER)
+		think_left = float(plan["think"]) + randf_range(-THINK_JITTER, THINK_JITTER)
 		_think()
 
 func _think() -> void:
@@ -71,7 +73,7 @@ func _think() -> void:
 # --- hiring -------------------------------------------------------------------
 
 func _hire(me: PlayerState) -> void:
-	for i in HIRES_PER_THOUGHT:
+	for i in int(plan["hires"]):
 		var kind := _next_hire(me)
 		if kind == "" or not game.hire(team, kind):
 			return
@@ -79,35 +81,66 @@ func _hire(me: PlayerState) -> void:
 ## What is most wanted right now, or "" for nothing.
 func _next_hire(me: PlayerState) -> String:
 	var hands := _hands(me)
+	var first: Dictionary = plan["workers_first"]
+	var full: Dictionary = plan["workers_full"]
 	# the first hands before anything else: without them there is nothing to pay with
-	for trade in WORKERS_FIRST:
-		if hands[trade] < WORKERS_FIRST[trade]:
+	for trade in first:
+		if hands[trade] < first[trade]:
 			return TRADE_KIND[trade]
 	var soldier := _soldier_kind(me)
-	# the gold for knighthood is in: put the rest of its price by instead of
-	# spending it on one more club
-	if _saving_for_chivalry(me):
-		return ""
-	# once there is an army, somebody starts on the gold that knighthood costs
-	if (attacking or wave_size > FIRST_WAVE) and not me.has_researched("chivalry") \
-			and hands["gold"] < GOLD_HANDS:
+	# a library comes first: without one nothing can ever be learned, and wood
+	# spent on clubs as fast as it comes in never adds up to one
+	if _saving_for_library(me):
+		return _hands_for(me, hands, game.BUILDINGS["library"]["cost"])
+	# the next study's price is being put by instead of spent on one more club
+	if _saving_for_study(me):
+		return _hands_for(me, hands, PlayerState.RESEARCH[_next_study(me)]["cost"])
+	# once there is an army or a library, somebody starts on the gold it will want
+	if (attacking or wave_size > int(plan["first_wave"]) or me.library() != null) and _wants_gold(me) \
+			and hands["gold"] < int(plan["gold_hands"]):
 		return TRADE_KIND["gold"]
 	# short of what a soldier costs: more hands on that, rather than waiting on
 	# a trickle for ever while the other store piles up
 	var price: Dictionary = ProductionBuilding.CATALOG[soldier]["cost"]
 	for resource in price:
 		if me.economy.amount(resource) < int(price[resource]) \
-				and WORKERS_FULL.has(resource) and hands[resource] < WORKERS_FULL[resource]:
+				and full.has(resource) and hands[resource] < full[resource]:
 			return TRADE_KIND[resource]
 	# then soldiers, as long as the next wave is not yet up to strength
 	if _at_home(me).size() < wave_size:
 		return soldier
-	for trade in WORKERS_FULL:
-		if hands[trade] < WORKERS_FULL[trade]:
+	for trade in full:
+		if hands[trade] < full[trade]:
 			return TRADE_KIND[trade]
 	return soldier
 
+## While putting a price by: more hands on whatever it is short of -- they are
+## paid in the other goods, so hiring them does not eat into the saving -- and
+## nothing else.
+func _hands_for(me: PlayerState, hands: Dictionary, price: Dictionary) -> String:
+	var full: Dictionary = plan["workers_full"]
+	for resource in price:
+		if me.economy.amount(resource) < int(price[resource]) and full.has(resource) \
+				and hands[resource] < full[resource]:
+			return TRADE_KIND[resource]
+	return ""
+
+## Whether anything it still means to learn costs gold.
+func _wants_gold(me: PlayerState) -> bool:
+	for study in plan["studies"]:
+		if not me.has_researched(study) and PlayerState.RESEARCH[study]["cost"].has("gold"):
+			return true
+	return false
+
+func _saving_for_library(me: PlayerState) -> bool:
+	return not (plan["studies"] as Array).is_empty() and me.workers().size() >= int(plan["library_after"]) \
+		and not me.has_library_site() and not me.economy.can_afford(game.BUILDINGS["library"]["cost"])
+
+## Kept under its old name too, for anything that asked it.
 func _saving_for_chivalry(me: PlayerState) -> bool:
+	return _saving_for_study(me)
+
+func _saving_for_study(me: PlayerState) -> bool:
 	var study := _next_study(me)
 	if study == "" or me.researching != "" or me.library() == null:
 		return false
@@ -116,21 +149,27 @@ func _saving_for_chivalry(me: PlayerState) -> bool:
 	return me.economy.gold >= int(price.get("gold", 0)) and not me.economy.can_afford(price)
 
 func _next_study(me: PlayerState) -> String:
-	for study in STUDIES:
+	for study in plan["studies"]:
 		if not me.has_researched(study):
 			return study
 	return ""
 
 # --- building -----------------------------------------------------------------
 
-## A library once the first hands are at work, then a couple of towers in front
-## of the castle once there is an army to spare the wood.
+## A library once enough hands are at work (if there is anything to learn),
+## then towers in front of the castle: straight away for a cautious head, once
+## there is an army to spare the wood for the rest.
 func _put_up(me: PlayerState) -> void:
-	if me.workers().size() >= 3 and not me.has_library_site():
+	if not (plan["studies"] as Array).is_empty() and me.workers().size() >= int(plan["library_after"]) \
+			and not me.has_library_site():
 		_build_near(me, "library", 420.0)
 		return
-	if me.library() != null and wave_size > FIRST_WAVE and _towers(me) < TOWERS_WANTED:
-		_build_near(me, "tower", 560.0 + 90.0 * _towers(me))
+	var towers := _towers(me)
+	var time_for_towers: bool = me.library() != null \
+		and (bool(plan["towers_early"]) or wave_size > int(plan["first_wave"]))
+	if time_for_towers and towers < int(plan["towers"]):
+		# the first two either side of the way in, any more out in front of them
+		_build_near(me, "tower", 540.0 + 110.0 * float(towers / 2))
 
 func _towers(me: PlayerState) -> int:
 	var count := 0
@@ -159,9 +198,28 @@ func _field_middle() -> float:
 		return 0.0
 	return (foe.base().global_position.x + me.base().global_position.x) * 0.5
 
-## The best soldier it knows how to field.
+## The soldier its army is shortest of, going by the mix its plan likes, of those
+## it knows how to field; clubs only if the plan wants them or nothing better is open.
 func _soldier_kind(me: PlayerState) -> String:
-	return "knight" if me.has_researched("chivalry") else "warrior"
+	var barracks := me.barracks()
+	if barracks == null:
+		return "warrior"
+	var have := {}
+	for unit in me.squad.alive():
+		have[unit.loadout] = int(have.get(unit.loadout, 0)) + 1
+	for kind in barracks.queue:
+		have[kind] = int(have.get(kind, 0)) + 1
+	var mix: Dictionary = plan["mix"]
+	var best := "warrior"
+	var best_share := INF
+	for kind in mix:
+		if not barracks.is_unlocked(kind):
+			continue
+		var share := float(have.get(kind, 0)) / float(mix[kind])
+		if share < best_share:
+			best_share = share
+			best = kind
+	return best
 
 func _hands(me: PlayerState) -> Dictionary:
 	var count := {"wood": 0, "ore": 0, "gold": 0}
@@ -208,24 +266,34 @@ func _guard_home(me: PlayerState) -> bool:
 		defending = false
 		# they came and they are gone: strike back while they are weak, or stand down
 		var left := _at_home(me)
-		if left.size() >= ceili(wave_size * COUNTER_SHARE):
+		if _may_attack(me) and left.size() >= ceili(wave_size * float(plan["counter_share"])):
 			_launch(left)
 		else:
 			game.rally_home(team)
 		return true
 	return false
 
+## Whether the plan lets it go out yet: not before its time, nor before it has
+## learned what it wants to go out with.
+func _may_attack(me: PlayerState) -> bool:
+	if game.match_time < float(plan["attack_after"]):
+		return false
+	for study in plan["attack_needs"]:
+		if not me.has_researched(study):
+			return false
+	return true
+
 func _wage_war(me: PlayerState) -> void:
 	if attacking:
-		if _wave_left() <= SPENT_AT:
+		if _wave_left() <= int(plan["spent_at"]):
 			# spent: bring back whoever is left, and make the next one bigger
 			attacking = false
 			wave.clear()
-			wave_size = mini(wave_size + WAVE_GROWTH, WAVE_MAX)
+			wave_size = mini(wave_size + int(plan["wave_growth"]), int(plan["wave_max"]))
 			game.rally_home(team)
 		return
 	var ready := _at_home(me)
-	if ready.size() >= wave_size:
+	if ready.size() >= wave_size and _may_attack(me):
 		_launch(ready)
 
 func _launch(soldiers: Array[Unit]) -> void:
@@ -233,11 +301,11 @@ func _launch(soldiers: Array[Unit]) -> void:
 	wave = soldiers
 	game.attack_enemy_base(team)
 
-## The nearest living soldier or labourer of any other side within HOME_GUARD of
-## the keep's walls, seen the way anyone sees the field: through what is on it.
+## The nearest living soldier or labourer of any other side within the plan's
+## guard distance of the keep's walls, seen the way anyone sees the field.
 func _nearest_foe_to_keep(keep: Base) -> Node2D:
 	var best: Node2D = null
-	var best_distance := HOME_GUARD
+	var best_distance := float(plan["home_guard"])
 	for node in get_tree().get_nodes_in_group("targets"):
 		var body := node as PlayerBody
 		if body == null or not body.is_alive() or not Team.hostile(team, body.team):

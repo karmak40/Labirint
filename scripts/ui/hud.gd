@@ -11,20 +11,25 @@ extends CanvasLayer
 ## Placing a building is handed to the input adapter, which owns the mouse on
 ## the field.
 
-const HIRE := ["woodcutter", "miner", "gold_miner", "warrior", "knight"]
+const WORKERS := ["woodcutter", "miner", "gold_miner"]
+const TROOPS := ["warrior", "spearman", "archer", "crossbowman", "knight"]
 const BUILD := ["tower", "library"]
-const LEARN := ["chivalry", "forging", "mail"]
-const TABS := [["Найм", "army"], ["Постройки", "build"], ["Знания", "book"]]
+const LEARN := ["spears", "archery", "crossbows", "chivalry", "forging", "mail"]
+const TABS := [["Рабочие", "worker"], ["Войска", "army"], ["Постройки", "build"], ["Знания", "book"]]
 const NAMES := {
 	"woodcutter": "Лесоруб", "miner": "Рудокоп", "gold_miner": "Старатель",
-	"warrior": "Воин", "knight": "Рыцарь",
+	"warrior": "Воин", "spearman": "Копейщик", "archer": "Лучник",
+	"crossbowman": "Арбалетчик", "knight": "Рыцарь",
 }
 const ABOUT := {
 	"woodcutter": "Рубит деревья и носит брёвна на склад.",
 	"miner": "Добывает руду в жилах и носит на склад.",
 	"gold_miner": "Добывает золото: оно нужно для знаний.",
 	"warrior": "Дешёвый боец с дубиной. Доступен сразу.",
-	"knight": "Латы, меч и щит: крепче и сильнее воина.",
+	"spearman": "Копьё бьёт сильнее дубины, шлем бережёт голову.",
+	"archer": "Стреляет издалека и отходит от тех, кто подбирается близко. Хрупкий.",
+	"crossbowman": "Бьёт дальше и сильнее лучника, но между выстрелами взводит арбалет.",
+	"knight": "Латы, меч и щит: крепче и сильнее всех.",
 }
 const REFRESH := 0.1
 const MESSAGE_TIME := 2.6
@@ -50,6 +55,9 @@ var overlay: Control
 var overlay_title: Label
 var overlay_note: Label
 var resume_button: Button
+var next_button: Button
+var objective: Label
+var rules: RoomRules
 var refresh_left := 0.0
 @onready var input: Node = get_node_or_null("PlayerInput")
 
@@ -58,7 +66,7 @@ class StatusView:
 	extends Control
 	var hud: Node
 	func _init() -> void:
-		custom_minimum_size = Vector2(178.0, 78.0)
+		custom_minimum_size = Vector2(164.0, 78.0)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 	func _draw() -> void:
 		var side: PlayerState = GameState.human()
@@ -81,13 +89,13 @@ class StatusView:
 		# the study, if there is a library to do it in
 		draw_string(font, Vector2(0.0, y), "Знания", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UiStyle.DIM)
 		if side.researching != "":
-			draw_string(font, Vector2(56.0, y), PlayerState.RESEARCH[side.researching]["title"], HORIZONTAL_ALIGNMENT_LEFT, 122.0, 11, UiStyle.TEXT)
-			UiStyle.bar(self, Rect2(Vector2(56.0, y + 5.0), Vector2(118.0, 3.0)), side.research_share(), UiStyle.STUDY_FILL)
+			draw_string(font, Vector2(56.0, y), PlayerState.RESEARCH[side.researching]["title"], HORIZONTAL_ALIGNMENT_LEFT, 106.0, 11, UiStyle.TEXT)
+			UiStyle.bar(self, Rect2(Vector2(56.0, y + 5.0), Vector2(104.0, 3.0)), side.research_share(), UiStyle.STUDY_FILL)
 		elif side.library() == null:
 			draw_string(font, Vector2(56.0, y), "нужна библиотека" if not side.has_library_site() else "библиотека строится",
-				HORIZONTAL_ALIGNMENT_LEFT, 122.0, 11, UiStyle.DIM)
+				HORIZONTAL_ALIGNMENT_LEFT, 106.0, 11, UiStyle.DIM)
 		else:
-			draw_string(font, Vector2(56.0, y), "ничего не изучается", HORIZONTAL_ALIGNMENT_LEFT, 122.0, 11, UiStyle.DIM)
+			draw_string(font, Vector2(56.0, y), "ничего не изучается", HORIZONTAL_ALIGNMENT_LEFT, 106.0, 11, UiStyle.DIM)
 		y += 26.0
 		# sites still going up
 		draw_string(font, Vector2(0.0, y), "Стройка", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UiStyle.DIM)
@@ -126,6 +134,7 @@ func _ready() -> void:
 	_build_top_bar()
 	_build_minimap()
 	_build_bottom_bar()
+	_build_objective()
 	_build_message()
 	_build_toast()
 	_build_overlay()
@@ -142,6 +151,10 @@ func _ready() -> void:
 
 func _on_match_started() -> void:
 	minimap.field = GameState.field()
+	rules = GameState.field().get_node_or_null("RoomRules") as RoomRules
+	if rules != null:
+		rules.gates_opened.connect(func() -> void: say("Ворота вражеской крепости открыты — на штурм!", UiStyle.GOLD_BRIGHT))
+		rules.wave_sent.connect(func(i: int, n: int) -> void: say("Волна %d: %d врагов идут на крепость!" % [i + 1, n], UiStyle.BAD))
 	var side := GameState.human()
 	if side == null or GameState.spectating:
 		return
@@ -210,6 +223,9 @@ func say(text: String, tint: Color = UiStyle.TEXT) -> void:
 # --- reading the side ---------------------------------------------------------
 
 func _refresh() -> void:
+	objective.get_parent().visible = rules != null and not GameState.spectating
+	if rules != null:
+		objective.text = "Цель: " + rules.objective()
 	if GameState.spectating:
 		_refresh_watching()
 		return
@@ -223,7 +239,7 @@ func _refresh() -> void:
 	chips["army"].text = str(side.squad.alive().size())
 	chips["hands"].text = str(side.workers().size())
 	var barracks := side.barracks()
-	for card in cards[0]:
+	for card in cards[0] + cards[1]:
 		var kind: String = card.get_meta("kind")
 		var entry: Dictionary = ProductionBuilding.CATALOG[kind]
 		card.store = e
@@ -239,7 +255,7 @@ func _refresh() -> void:
 			card.count = waiting
 		card.disabled = barracks == null or not barracks.can_hire(kind)
 		card.refresh()
-	for card in cards[1]:
+	for card in cards[2]:
 		var kind: String = card.get_meta("kind")
 		card.store = e
 		card.badge = ""
@@ -251,7 +267,7 @@ func _refresh() -> void:
 		else:
 			card.disabled = not e.can_afford(GameState.BUILDINGS[kind]["cost"])
 		card.refresh()
-	for card in cards[2]:
+	for card in cards[3]:
 		var id: String = card.get_meta("kind")
 		card.store = e
 		card.badge = ""
@@ -266,7 +282,9 @@ func _refresh() -> void:
 			card.disabled = true
 		else:
 			if side.library() == null:
-				card.locked = "нужна библиотека"
+				card.locked = "библиотека"
+			elif not side.prerequisite_met(id):
+				card.locked = PlayerState.RESEARCH[PlayerState.RESEARCH[id]["needs"]]["title"]
 			card.disabled = not side.can_research(id)
 		card.refresh()
 	status.queue_redraw()
@@ -279,8 +297,10 @@ func _refresh_watching() -> void:
 		if side == null:
 			continue
 		var e := side.economy
-		lines.append("[color=#%s]%s[/color]  дерево %d · руда %d · золото %d · армия %d · рабочие %d" % [
-			Team.color(team).lightened(0.2).to_html(false), GameState.team_name(team).capitalize(),
+		var head: AIDirector = side.get_node_or_null("AIDirector")
+		var style := (" (%s)" % AIProfile.title(head.strategy)) if head != null else ""
+		lines.append("[color=#%s]%s%s[/color]  дерево %d · руда %d · золото %d · армия %d · рабочие %d" % [
+			Team.color(team).lightened(0.2).to_html(false), GameState.team_name(team).capitalize(), style,
 			e.wood, e.ore, e.gold, side.squad.alive().size(), side.workers().size()])
 	watch_label.text = "\n".join(lines)
 
@@ -321,6 +341,8 @@ func _show_pause(on: bool) -> void:
 func _on_match_ended(winner: int) -> void:
 	overlay.visible = true
 	resume_button.visible = false
+	next_button.visible = false
+	call_deferred("_name_the_enemy")
 	if input != null:
 		input.cancel_placing()
 	if GameState.spectating:
@@ -329,9 +351,23 @@ func _on_match_ended(winner: int) -> void:
 	elif winner == GameState.human_team:
 		overlay_title.text = "Победа"
 		overlay_note.text = "Вражеская крепость пала."
+		if Campaign.current >= 0:
+			var earned: int = Campaign.last_earned
+			overlay_title.text = "Победа  " + "★".repeat(earned) + "☆".repeat(3 - earned)
+			overlay_note.text = "%s пройдена за %d:%02d." % [Campaign.ROOMS[Campaign.current]["title"],
+				int(GameState.match_time) / 60, int(GameState.match_time) % 60]
+			next_button.visible = Campaign.next_room() >= 0
 	else:
 		overlay_title.text = "Поражение"
 		overlay_note.text = "Ваша крепость пала."
+
+## Once the verdict is on the screen: how the enemy was playing, now it can be told.
+func _name_the_enemy() -> void:
+	var foe := GameState.enemy_of(GameState.human_team)
+	var head: AIDirector = foe.get_node_or_null("AIDirector") if foe != null else null
+	if head != null and not GameState.spectating:
+		overlay_note.text += "\nПротивник: %s, %s" % [AIProfile.title(head.strategy),
+			AIProfile.DIFFICULTIES[head.difficulty]["title"].to_lower()]
 
 # --- achievement toasts -------------------------------------------------------
 
@@ -433,7 +469,7 @@ func _build_bottom_bar() -> void:
 		button.text = TABS[i][0]
 		button.toggle_mode = true
 		button.focus_mode = Control.FOCUS_NONE
-		button.custom_minimum_size = Vector2(96.0, 24.0)
+		button.custom_minimum_size = Vector2(86.0, 24.0)
 		button.add_theme_font_size_override("font_size", 12)
 		button.tooltip_text = "Tab — следующая вкладка"
 		button.pressed.connect(_select_tab.bind(i))
@@ -442,26 +478,31 @@ func _build_bottom_bar() -> void:
 	cards_row = HBoxContainer.new()
 	cards_row.add_theme_constant_override("separation", 5)
 	left.add_child(cards_row)
-	cards[0] = []
-	for i in HIRE.size():
-		var kind: String = HIRE[i]
-		var card := _card(kind, NAMES[kind], ProductionBuilding.CATALOG[kind]["cost"], str(i + 1), ABOUT[kind])
-		card.pressed.connect(_hire.bind(kind))
-		cards[0].append(card)
-	cards[1] = []
+	for group in [[0, WORKERS], [1, TROOPS]]:
+		cards[group[0]] = []
+		for i in group[1].size():
+			var kind: String = group[1][i]
+			var card := _card(kind, NAMES[kind], ProductionBuilding.CATALOG[kind]["cost"], str(i + 1), ABOUT[kind])
+			card.pressed.connect(_hire.bind(kind))
+			cards[group[0]].append(card)
+	cards[2] = []
 	for i in BUILD.size():
 		var kind: String = BUILD[i]
 		var entry: Dictionary = GameState.BUILDINGS[kind]
 		var card := _card(kind, entry["title"], entry["cost"], str(i + 1), entry["about"])
 		card.pressed.connect(_place.bind(kind))
-		cards[1].append(card)
-	cards[2] = []
+		cards[2].append(card)
+	cards[3] = []
 	for i in LEARN.size():
 		var id: String = LEARN[i]
 		var entry: Dictionary = PlayerState.RESEARCH[id]
-		var card := _card(id, entry["title"], entry["cost"], str(i + 1), "%s\nИзучается %d с в библиотеке." % [entry["about"], int(entry["time"])])
+		var after := ""
+		if entry.has("needs"):
+			after = "\nСначала: %s." % PlayerState.RESEARCH[entry["needs"]]["title"]
+		var card := _card(id, entry["title"], entry["cost"], str(i + 1),
+			"%s%s\nИзучается %d с в библиотеке." % [entry["about"], after, int(entry["time"])])
 		card.pressed.connect(_learn.bind(id))
-		cards[2].append(card)
+		cards[3].append(card)
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -494,6 +535,18 @@ func _card(kind: String, title: String, cost: Dictionary, key: String, about: St
 	card.tooltip_text = "%s  [%s]\n%s\nЦена: %s" % [title, key, about, ", ".join(price)]
 	cards_row.add_child(card)
 	return card
+
+func _build_objective() -> void:
+	var holder := PanelContainer.new()
+	holder.add_theme_stylebox_override("panel", UiStyle.box(Color(0.08, 0.06, 0.05, 0.8), UiStyle.GOLD_DIM, 1, 5, 6.0))
+	holder.position = Vector2(8.0, 50.0)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.visible = false
+	root.add_child(holder)
+	objective = Label.new()
+	objective.add_theme_font_size_override("font_size", 13)
+	objective.add_theme_color_override("font_color", UiStyle.GOLD_BRIGHT)
+	holder.add_child(objective)
 
 func _build_message() -> void:
 	var holder := PanelContainer.new()
@@ -561,6 +614,8 @@ func _build_overlay() -> void:
 	overlay_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(overlay_note)
 	resume_button = _overlay_button(column, "Продолжить", func() -> void: _show_pause(false))
+	next_button = _overlay_button(column, "Следующая комната", func() -> void: Campaign.start(Campaign.next_room()))
+	next_button.visible = false
 	_overlay_button(column, "Заново", GameState.restart_match)
 	_overlay_button(column, "В меню", GameState.back_to_menu)
 

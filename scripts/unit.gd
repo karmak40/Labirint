@@ -33,9 +33,21 @@ const HAND_BIAS := 120.0       ## marching on a goal, a labourer counts this muc
 
 @export var patrol := 120.0
 @export var guards := true     ## false: stands its post instead of pacing it
-## What it is kitted out as: "knight" (plate, sword and shield, trained) or
-## "warrior" (a club and no armour -- the first thing anyone can hire).
+## What it is kitted out as, one of LOADOUTS.
 @export var loadout := "knight"
+
+## Every kind of soldier is the same body with different kit. `health` is a share
+## of the body's own; `reach` > 0 makes it a shooter that keeps that far off.
+const LOADOUTS := {
+	"knight": {"weapon": Weapon.SWORD_SHIELD, "helm": true, "armour": true, "health": 1.5, "skill": 3},
+	"warrior": {"weapon": Weapon.CLUB, "helm": false, "armour": false, "health": 1.0, "skill": 1},
+	"spearman": {"weapon": Weapon.SPEAR, "helm": true, "armour": false, "health": 1.15, "skill": 2},
+	"archer": {"weapon": Weapon.BOW, "helm": false, "armour": false, "health": 0.9, "skill": 2, "reach": 220.0},
+	"crossbowman": {"weapon": Weapon.CROSSBOW, "helm": true, "armour": false, "health": 1.0, "skill": 1, "reach": 250.0},
+}
+const SHOOTER_CLOSE := 90.0    ## nearer than this a shooter steps back before loosing
+const SHOOTER_RECOVER := 0.4   ## and a breath between shots
+const AIM_LEAD := 0.35         ## seconds of the mark's running it aims ahead by
 
 enum Watch { PATROL, NOTICED, FIGHTING, RETURNING }
 
@@ -108,25 +120,22 @@ func strike_harm() -> float:
 	return super() * harm_scale
 
 func _kit_out() -> void:
-	if loadout == "warrior":
-		# a man handed a club: no plate, no helm, no training to speak of
-		weapon = Weapon.CLUB
-		helm = Helm.NONE
-		skills[Weapon.CLUB] = 1
-		health_max = HEALTH_MAX
-		health = health_max
-		if rig != null:
-			rig.armoured = false
-		return
-	weapon = Weapon.SWORD_SHIELD
-	helm = Helm.WORN
-	# a man who does this for a living: the same stroke costs him a third less
-	skills[Weapon.SWORD_SHIELD] = 3
-	# plate is worth something even before he learns to use the shield
-	health_max = HEALTH_MAX * 1.5
+	var kit: Dictionary = LOADOUTS.get(loadout, LOADOUTS["knight"])
+	weapon = kit["weapon"]
+	helm = Helm.WORN if kit["helm"] else Helm.NONE
+	# training: each level makes the same stroke cheaper in breath
+	skills[weapon] = int(kit["skill"])
+	health_max = HEALTH_MAX * float(kit["health"])
 	health = health_max
 	if rig != null:
-		rig.armoured = true
+		rig.armoured = bool(kit["armour"])
+
+## How far off it fights from: a sword's length, or a bowshot.
+func reach() -> float:
+	return float(LOADOUTS.get(loadout, {}).get("reach", 0.0))
+
+func is_shooter() -> bool:
+	return reach() > 0.0
 
 ## The knight's whole contribution: everything else on this body already exists.
 func _get_input_vector() -> Vector2:
@@ -266,6 +275,9 @@ func _face(mark: Node2D) -> void:
 		facing_x = signf(dx)
 
 func _fight() -> void:
+	if is_shooter():
+		_shoot()
+		return
 	_face(quarry)
 	# a wall is fought where it is nearest, a man where he stands
 	var aim := Team.spot(quarry, global_position)
@@ -292,6 +304,29 @@ func _fight() -> void:
 
 	# in reach and standing still: swing, then leave a gap to be punished in
 	if gap <= SWING_AT and not is_attacking() and watch_time > RECOVER:
+		attack()
+		watch_time = 0.0
+
+## A bow or a crossbow: stand off at a bowshot, back away (facing them) from
+## anyone who closes, and loose at where the mark will be. A crossbow's attack
+## spans it when it is empty, so the same call does both.
+func _shoot() -> void:
+	_face(quarry)
+	var aim := Team.spot(quarry, global_position)
+	var gap := global_position.distance_to(aim)
+	if gap < SHOOTER_CLOSE and quarry is PlayerBody and not is_attacking():
+		facing_locked = true
+		wish = (global_position - aim).normalized() * PATROL_SPEED
+		return
+	if gap > reach():
+		_walk_towards(aim, ADVANCE_SPEED)
+		return
+	if not can_strike() and not is_attacking():
+		return
+	if not is_attacking() and watch_time > SHOOTER_RECOVER:
+		# where it will be by the time the shot gets there, roughly
+		var running := (quarry as CharacterBody2D).velocity if quarry is CharacterBody2D else Vector2.ZERO
+		aim_point = aim + running * AIM_LEAD * clampf(gap / reach(), 0.3, 1.0)
 		attack()
 		watch_time = 0.0
 

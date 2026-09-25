@@ -17,6 +17,9 @@ const CATALOG := {
 	# the first soldier anyone can put in the field
 	"warrior": {"scene": "res://scenes/warrior/Warrior.tscn", "cost": {"wood": 15}, "time": 5.0},
 	# everything past the warrior has to be learned first (PlayerState.RESEARCH)
+	"spearman": {"scene": "res://scenes/warrior/Warrior.tscn", "loadout": "spearman", "cost": {"wood": 15, "ore": 5}, "time": 5.0, "requires": "spears"},
+	"archer": {"scene": "res://scenes/warrior/Warrior.tscn", "loadout": "archer", "cost": {"wood": 20}, "time": 5.0, "requires": "archery"},
+	"crossbowman": {"scene": "res://scenes/warrior/Warrior.tscn", "loadout": "crossbowman", "cost": {"wood": 15, "ore": 15}, "time": 6.0, "requires": "crossbows"},
 	"knight": {"scene": "res://scenes/knight/Knight.tscn", "cost": {"wood": 20, "ore": 20}, "time": 6.0, "requires": "chivalry"},
 }
 const QUEUE_MAX := 5
@@ -34,7 +37,7 @@ const WALL_HEIGHT := 40.0
 const ROOF_HEIGHT := 30.0
 
 ## What it can hire; a subset of CATALOG.
-@export var kinds: PackedStringArray = PackedStringArray(["woodcutter", "miner", "gold_miner", "warrior", "knight"])
+@export var kinds: PackedStringArray = PackedStringArray(["woodcutter", "miner", "gold_miner", "warrior", "spearman", "archer", "crossbowman", "knight"])
 ## Where recruits go and stand, relative to the building, until told otherwise.
 @export var rally_offset := Vector2(0.0, 90.0)
 
@@ -96,6 +99,8 @@ func _turn_out(kind: String) -> void:
 	recruit.team = team
 	if entry.has("job"):
 		recruit.set("job", entry["job"])
+	if entry.has("loadout"):
+		recruit.set("loadout", entry["loadout"])
 	recruit.position = position + DOOR_OUT
 	get_parent().add_child(recruit)
 	var soldier := recruit as Unit

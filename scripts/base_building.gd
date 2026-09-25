@@ -20,6 +20,7 @@ const DOOR := Color(0.18, 0.13, 0.09)
 const IRON := Color(0.30, 0.30, 0.32)
 const SLIT := Color(0.14, 0.13, 0.14)
 const POLE := Color(0.30, 0.23, 0.16)
+const BAR_WOOD := Color(0.56, 0.40, 0.22)   ## the beams that bar a shut gate
 
 const WALL_HALF := 150.0       ## half the curtain wall's width
 const WALL_TALL := 130.0
@@ -38,6 +39,17 @@ func _init() -> void:
 func _ready() -> void:
 	super()
 	add_to_group("bases")
+
+## Gates barred: no blow does it any harm. A siege opens them when it is time
+## (RoomRules); a castle out in the field is never shut.
+var shut := false
+
+func take_hit(from: Vector2 = Vector2.INF, damage: float = 10.0) -> void:
+	if shut:
+		flash = FLASH_TIME * 0.5
+		queue_redraw()
+		return
+	super(from, damage)
 
 func _fall() -> void:
 	base_destroyed.emit(team)
@@ -71,7 +83,7 @@ func _draw_standing() -> void:
 	# the side's arms over the gate
 	draw_circle(Vector2(0.0, foot - 118.0), 17.0, flag)
 	draw_arc(Vector2(0.0, foot - 118.0), 17.0, 0.0, TAU, 28, STONE_EDGE, 2.0, true)
-	# and the gate: an arch, a portcullis in it
+	# and the gate: an arch, a portcullis in it -- let right down when shut
 	var gate_half := 22.0
 	draw_rect(Rect2(-gate_half, foot - 52.0, gate_half * 2.0, 52.0), DOOR)
 	draw_circle(Vector2(0.0, foot - 52.0), gate_half, DOOR)
@@ -79,6 +91,15 @@ func _draw_standing() -> void:
 		draw_line(Vector2(i * 8.0, foot - 70.0), Vector2(i * 8.0, foot), IRON, 2.0)
 	for i in 3:
 		draw_line(Vector2(-gate_half, foot - 14.0 - i * 16.0), Vector2(gate_half, foot - 14.0 - i * 16.0), IRON, 2.0)
+	if shut:
+		# barred: heavy beams across the gate, and the banners dipped in iron grey
+		for i in 3:
+			var bar := Rect2(-gate_half - 7.0, foot - 20.0 - i * 17.0, gate_half * 2.0 + 14.0, 8.0)
+			draw_rect(bar, BAR_WOOD)
+			draw_rect(bar, IRON, false, 1.5)
+			draw_circle(Vector2(-gate_half - 3.0, bar.position.y + 4.0), 2.2, IRON)
+			draw_circle(Vector2(gate_half + 3.0, bar.position.y + 4.0), 2.2, IRON)
+		draw_arc(Vector2(0.0, foot - 118.0), 21.0, 0.0, TAU, 30, IRON, 3.0, true)
 
 ## A square-fronted piece of masonry from `left` to `right`, standing on `foot`,
 ## `tall` high, with courses of stone and battlements along its top.

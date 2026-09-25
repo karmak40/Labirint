@@ -40,6 +40,10 @@ var spectating := false
 var winner: int = Team.Id.NEUTRAL
 ## Team -> PlayerState, for the match being played.
 var states := {}
+## How the enemy's head plays the next match (AIProfile): its strategy, or
+## "random", and its difficulty. In AI against AI both sides pick at random.
+var ai_strategy := "random"
+var ai_difficulty := "normal"
 ## Seconds of play in the current match; stops while paused.
 var match_time := 0.0
 
@@ -92,6 +96,8 @@ func register_match(sides: Dictionary) -> void:
 		if spectating or team != human_team:
 			var director := AIDirector.new()
 			director.name = "AIDirector"
+			director.strategy = "random" if spectating else ai_strategy
+			director.difficulty = ai_difficulty
 			state.add_child(director)
 	match_started.emit()
 
@@ -198,6 +204,9 @@ func build_problem(team: int, kind: String, point: Vector2) -> String:
 	for node in get_tree().get_nodes_in_group("veins"):
 		if _gap(area, (node as Node2D).global_position) < 44.0:
 			return "Мешает жила"
+	for node in get_tree().get_nodes_in_group("boulders"):
+		if _gap(area, (node as Node2D).global_position) < (node as Boulder).radius + 8.0:
+			return "Мешают скалы"
 	for node in get_tree().get_nodes_in_group("stockpiles"):
 		if _gap(area, (node as Node2D).global_position) < Stockpile.RADIUS + 10.0:
 			return "Мешает склад"

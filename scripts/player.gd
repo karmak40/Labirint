@@ -204,6 +204,10 @@ var roll_dir := 1.0
 # both can be hoisted, and that is the only thing carrying needs to know.
 var carried_item: Node2D = null
 var target_item: Node2D = null
+## Where a shot is meant to land, on the floor, or INF to shoot straight ahead
+## the way a figure seen from the side does. Something that picks its targets
+## (Unit) sets it before loosing; the keyboard-driven body never does.
+var aim_point := Vector2.INF
 
 ## The rig owns everything the body has thrown or dropped, since it is what
 ## knows where the hands were when it left them.

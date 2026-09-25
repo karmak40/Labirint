@@ -209,7 +209,7 @@ func _worn_ground() -> void:
 		_patch(layout.stockpile, Vector2(70.0, 34.0))
 		_path([gate, layout.barracks + Vector2(0.0, 16.0)], 14.0)
 		_path([gate, layout.stockpile], 14.0)
-	for spot in map.vein_positions + map.gold_positions:
+	for spot in map.vein_positions + map.gold_positions + map.boulder_positions:
 		_pen(spot.x).ellipse(spot + Vector2(0.0, 4.0), Vector2(64.0, 26.0), GRASS.lerp(GRAVEL, 0.55))
 		_pen(spot.x).ellipse(spot + Vector2(0.0, 4.0), Vector2(46.0, 18.0), GRAVEL)
 		for j in 7:

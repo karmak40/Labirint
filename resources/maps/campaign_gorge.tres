@@ -1,0 +1,51 @@
+[gd_resource type="Resource" script_class="MapData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/map_data.gd" id="MapScript"]
+[ext_resource type="Script" path="res://scripts/side_layout.gd" id="SideScript"]
+
+[sub_resource type="Resource" id="PlayerSide"]
+script = ExtResource("SideScript")
+team = 1
+base = Vector2(190, 300)
+barracks = Vector2(460, 130)
+stockpile = Vector2(470, 390)
+towers = Array[Vector2]([])
+rally = Vector2(620, 300)
+start_workers = PackedStringArray()
+start_stock = {
+"ore": 60,
+"wood": 60
+}
+
+[sub_resource type="Resource" id="EnemySide"]
+script = ExtResource("SideScript")
+team = 2
+base = Vector2(2810, 300)
+barracks = Vector2(2540, 130)
+stockpile = Vector2(2530, 390)
+towers = Array[Vector2]([Vector2(1920, 220), Vector2(1920, 330)])
+rally = Vector2(2380, 300)
+start_workers = PackedStringArray()
+start_stock = {
+"ore": 60,
+"wood": 60
+}
+
+[resource]
+script = ExtResource("MapScript")
+title = "Золотое ущелье"
+floor_size = Vector2(3000, 560)
+tree_positions = Array[Vector2]([Vector2(540, 548), Vector2(598, 512), Vector2(656, 548), Vector2(714, 512), Vector2(772, 548), Vector2(830, 512), Vector2(888, 548), Vector2(946, 512), Vector2(1004, 548), Vector2(1062, 512), Vector2(2460, 548), Vector2(2402, 512), Vector2(2344, 548), Vector2(2286, 512), Vector2(2228, 548), Vector2(2170, 512), Vector2(2112, 548), Vector2(2054, 512), Vector2(1996, 548), Vector2(1938, 512)])
+vein_positions = Array[Vector2]([Vector2(700, 140), Vector2(900, 245), Vector2(2300, 140), Vector2(2100, 245)])
+boulder_positions = Array[Vector2]([Vector2(1150, 38), Vector2(1181, 108), Vector2(1150, 436), Vector2(1181, 506), Vector2(1212, 38), Vector2(1243, 108), Vector2(1212, 436), Vector2(1243, 506), Vector2(1274, 38), Vector2(1305, 108), Vector2(1274, 436), Vector2(1305, 506), Vector2(1336, 38), Vector2(1367, 108), Vector2(1336, 436), Vector2(1367, 506), Vector2(1398, 38), Vector2(1429, 108), Vector2(1398, 436), Vector2(1429, 506), Vector2(1460, 38), Vector2(1491, 108), Vector2(1460, 436), Vector2(1491, 506), Vector2(1522, 38), Vector2(1553, 108), Vector2(1522, 436), Vector2(1553, 506), Vector2(1584, 38), Vector2(1615, 108), Vector2(1584, 436), Vector2(1615, 506), Vector2(1646, 38), Vector2(1677, 108), Vector2(1646, 436), Vector2(1677, 506), Vector2(1708, 38), Vector2(1739, 108), Vector2(1708, 436), Vector2(1739, 506), Vector2(1770, 38), Vector2(1801, 108), Vector2(1770, 436), Vector2(1801, 506), Vector2(1832, 38), Vector2(1863, 108), Vector2(1832, 436), Vector2(1863, 506)])
+gold_positions = Array[Vector2]([Vector2(1420, 272), Vector2(1580, 272)])
+ore_rocks = 20
+ore_rock_worth = 10
+gold_rocks = 10
+gold_rock_worth = 10
+tree_logs = 10
+log_worth = 5
+regrow_time = 90.0
+refill_time = 0.0
+player = SubResource("PlayerSide")
+enemy = SubResource("EnemySide")

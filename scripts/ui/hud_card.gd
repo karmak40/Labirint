@@ -18,7 +18,7 @@ var locked := ""               ## what it is waiting for; "" when open
 var store: Economy             ## to show what can not be afforded
 
 func _init() -> void:
-	custom_minimum_size = Vector2(106.0, 64.0)
+	custom_minimum_size = Vector2(94.0, 64.0)
 	focus_mode = Control.FOCUS_NONE
 	text = ""
 
@@ -40,7 +40,7 @@ func _draw() -> void:
 	for word in title.split(" "):
 		if word.length() > longest.length():
 			longest = word
-	while font_size > 9 and font.get_string_size(longest, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > room:
+	while font_size > 8 and font.get_string_size(longest, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > room:
 		font_size -= 1
 	var one_line := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= room
 	if one_line:
@@ -62,7 +62,7 @@ func _draw() -> void:
 		_draw_cost(font)
 	if progress >= 0.0:
 		UiStyle.bar(self, Rect2(Vector2(4.0, size.y - 6.0), Vector2(size.x - 8.0, 3.0)), progress,
-			UiStyle.STUDY_FILL if icon_kind in ["chivalry", "forging", "mail"] else UiStyle.BAR_FILL)
+			UiStyle.STUDY_FILL if PlayerState.RESEARCH.has(icon_kind) else UiStyle.BAR_FILL)
 
 func _draw_cost(font: Font) -> void:
 	var x := 6.0

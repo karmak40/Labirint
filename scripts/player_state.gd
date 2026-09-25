@@ -16,6 +16,12 @@ signal research_lost(id: String)
 ## What can be learned, what it costs, how long it takes and what it gives. One
 ## study at a time, and only in a finished library (Library).
 const RESEARCH := {
+	"spears": {"title": "Копья", "about": "Открывает найм копейщиков.",
+		"cost": {"wood": 40, "ore": 30}, "time": 20.0},
+	"archery": {"title": "Луки", "about": "Открывает найм лучников: бьют издалека, но хрупкие.",
+		"cost": {"wood": 60, "ore": 20}, "time": 25.0},
+	"crossbows": {"title": "Арбалеты", "about": "Открывает найм арбалетчиков: бьют сильнее и дальше лука, но медленно перезаряжают.",
+		"cost": {"ore": 60, "gold": 20}, "time": 25.0, "needs": "archery"},
 	"chivalry": {"title": "Рыцарство", "about": "Открывает найм рыцарей: латы, меч и щит.",
 		"cost": {"ore": 60, "gold": 40}, "time": 30.0},
 	"forging": {"title": "Кузнечное дело", "about": "+25% к урону всех воинов, и тех, что уже в строю.",
@@ -63,7 +69,12 @@ func has_researched(id: String) -> bool:
 
 func can_research(id: String) -> bool:
 	return RESEARCH.has(id) and not researched.has(id) and researching == "" \
-		and library() != null and economy.can_afford(RESEARCH[id]["cost"])
+		and library() != null and prerequisite_met(id) and economy.can_afford(RESEARCH[id]["cost"])
+
+## Whether whatever it builds on has been learned first.
+func prerequisite_met(id: String) -> bool:
+	var needs: String = RESEARCH[id].get("needs", "")
+	return needs == "" or researched.has(needs)
 
 ## Pays and starts it. False, and nothing taken, if it can not be started.
 func start_research(id: String) -> bool:

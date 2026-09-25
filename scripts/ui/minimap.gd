@@ -52,6 +52,8 @@ func _draw() -> void:
 		draw_polyline(line, ROAD, maxf(1.5, 30.0 * s))
 	for spot in field.map.tree_positions:
 		draw_circle(spot * s, maxf(1.3, 16.0 * s), TREE)
+	for spot in field.map.boulder_positions:
+		draw_circle(spot * s, maxf(1.6, 36.0 * s), Color(0.45, 0.44, 0.42))
 	for spot in field.map.vein_positions:
 		draw_rect(Rect2(spot * s - Vector2(1.5, 1.5), Vector2(3.0, 3.0)), ORE)
 	for spot in field.map.gold_positions:

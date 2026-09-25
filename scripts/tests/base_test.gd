@@ -16,8 +16,8 @@ var log_lines: Array[String] = []
 
 func _ready() -> void:
 	await get_tree().physics_frame
-	blue.economy.add("wood", 12)
-	blue.economy.add("ore", 6)
+	blue.economy.add("wood", 120)
+	blue.economy.add("ore", 60)
 	blue.economy.changed.connect(func(_k: String, _a: int) -> void: _show())
 	for side in [blue, red]:
 		var keep: Base = side.base()

@@ -66,6 +66,17 @@ static func draw(c: CanvasItem, kind: String, box: Rect2) -> void:
 			_figure(c, p, s)
 			c.draw_line(p.call(19.0, 22.0), p.call(28.0, 7.0), WOOD, 3.0 * s)
 			c.draw_circle(p.call(28.0, 7.0), 3.4 * s, WOOD)
+		"spearman":
+			_figure(c, p, s)
+			c.draw_line(p.call(16.0, 30.0), p.call(28.0, 2.0), WOOD_DARK, 2.0 * s)
+			c.draw_colored_polygon(PackedVector2Array([p.call(27.0, 0.0), p.call(31.0, 6.0), p.call(26.0, 5.0)]), STEEL)
+		"archer":
+			_figure(c, p, s)
+			_bow(c, p, s)
+		"crossbowman":
+			_figure(c, p, s)
+			c.draw_line(p.call(16.0, 18.0), p.call(30.0, 14.0), WOOD_DARK, 2.6 * s)
+			c.draw_arc(p.call(28.0, 14.0), 5.0 * s, -1.9, 1.3, 10, STEEL, 1.8 * s, true)
 		"knight":
 			c.draw_colored_polygon(PackedVector2Array([p.call(8.0, 8.0), p.call(24.0, 8.0), p.call(24.0, 18.0),
 				p.call(16.0, 28.0), p.call(8.0, 18.0)]), STEEL)
@@ -86,9 +97,18 @@ static func draw(c: CanvasItem, kind: String, box: Rect2) -> void:
 			c.draw_rect(Rect2(p.call(8.0, 17.0), Vector2(4.0, 7.0) * s), GOLD)
 			c.draw_rect(Rect2(p.call(20.0, 17.0), Vector2(4.0, 7.0) * s), GOLD)
 			c.draw_rect(Rect2(p.call(14.0, 21.0), Vector2(4.0, 8.0) * s), WOOD_DARK)
-		"book", "chivalry", "forging", "mail":
+		"book", "chivalry", "forging", "mail", "spears", "archery", "crossbows":
 			_book(c, p, s)
 			match kind:
+				"spears":
+					c.draw_line(p.call(18.0, 12.0), p.call(30.0, 1.0), WOOD_DARK, 1.8 * s)
+					c.draw_colored_polygon(PackedVector2Array([p.call(29.0, 0.0), p.call(32.0, 4.0), p.call(28.0, 3.0)]), STEEL)
+				"archery":
+					c.draw_arc(p.call(22.0, 8.0), 7.0 * s, -2.2, 0.6, 12, WOOD, 2.0 * s, true)
+					c.draw_line(p.call(17.0, 2.0), p.call(27.0, 12.0), WOOD_END, 1.0 * s)
+				"crossbows":
+					c.draw_line(p.call(17.0, 9.0), p.call(30.0, 6.0), WOOD_DARK, 2.2 * s)
+					c.draw_arc(p.call(28.0, 7.0), 4.5 * s, -1.9, 1.3, 10, STEEL, 1.6 * s, true)
 				"chivalry":
 					c.draw_circle(p.call(24.0, 8.0), 6.0 * s, STEEL)
 					c.draw_rect(Rect2(p.call(20.0, 7.0), Vector2(8.0, 2.0) * s), STEEL_DARK)
@@ -137,6 +157,10 @@ static func _figure(c: CanvasItem, p: Callable, s: float) -> void:
 	c.draw_line(p.call(12.0, 21.0), p.call(17.0, 29.0), SKIN, 2.4 * s)
 	c.draw_line(p.call(12.0, 13.0), p.call(20.0, 19.0), SKIN, 2.2 * s)
 	c.draw_line(p.call(12.0, 13.0), p.call(6.0, 19.0), SKIN, 2.2 * s)
+
+static func _bow(c: CanvasItem, p: Callable, s: float) -> void:
+	c.draw_arc(p.call(20.0, 16.0), 11.0 * s, -1.3, 1.3, 14, WOOD, 2.4 * s, true)
+	c.draw_line(p.call(24.0, 5.5), p.call(24.0, 26.5), WOOD_END, 1.0 * s)
 
 static func _book(c: CanvasItem, p: Callable, s: float) -> void:
 	c.draw_colored_polygon(PackedVector2Array([p.call(16.0, 14.0), p.call(4.0, 11.0), p.call(4.0, 27.0), p.call(16.0, 29.0)]), PAGE)
