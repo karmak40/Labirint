@@ -1,0 +1,121 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/tests/economy_test.gd" id="TestScript"]
+[ext_resource type="Script" path="res://scripts/floor_grid.gd" id="FloorGridScript"]
+[ext_resource type="Script" path="res://scripts/nav_floor.gd" id="NavFloorScript"]
+[ext_resource type="Script" path="res://scripts/tree.gd" id="TreeScript"]
+[ext_resource type="Script" path="res://scripts/ore_vein.gd" id="VeinScript"]
+[ext_resource type="Script" path="res://scripts/stockpile.gd" id="StockpileScript"]
+[ext_resource type="Script" path="res://scripts/player_state.gd" id="PlayerStateScript"]
+[ext_resource type="PackedScene" path="res://scenes/worker/Worker.tscn" id="WorkerScene"]
+
+[sub_resource type="RectangleShape2D" id="WallHorizontal"]
+size = Vector2(940, 20)
+
+[sub_resource type="RectangleShape2D" id="WallVertical"]
+size = Vector2(20, 600)
+
+[node name="EconomyTest" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("TestScript")
+side_path = NodePath("PlayerSide")
+
+[node name="Floor" type="ColorRect" parent="."]
+offset_right = 900.0
+offset_bottom = 560.0
+color = Color(0.3373, 0.3647, 0.4275, 1)
+
+[node name="GridOverlay" type="Node2D" parent="."]
+script = ExtResource("FloorGridScript")
+
+[node name="Walls" type="StaticBody2D" parent="."]
+
+[node name="Top" type="CollisionShape2D" parent="Walls"]
+position = Vector2(450, -10)
+shape = SubResource("WallHorizontal")
+
+[node name="Bottom" type="CollisionShape2D" parent="Walls"]
+position = Vector2(450, 570)
+shape = SubResource("WallHorizontal")
+
+[node name="Left" type="CollisionShape2D" parent="Walls"]
+position = Vector2(-10, 280)
+shape = SubResource("WallVertical")
+
+[node name="Right" type="CollisionShape2D" parent="Walls"]
+position = Vector2(910, 280)
+shape = SubResource("WallVertical")
+
+[node name="NavFloor" type="NavigationRegion2D" parent="."]
+script = ExtResource("NavFloorScript")
+
+[node name="PlayerSide" type="Node" parent="."]
+script = ExtResource("PlayerStateScript")
+team = 1
+
+[node name="Stockpile" type="Node2D" parent="."]
+position = Vector2(140, 280)
+script = ExtResource("StockpileScript")
+team = 1
+
+[node name="Tree1" type="Node2D" parent="."]
+position = Vector2(380, 110)
+script = ExtResource("TreeScript")
+
+[node name="Tree2" type="Node2D" parent="."]
+position = Vector2(430, 160)
+script = ExtResource("TreeScript")
+
+[node name="Tree3" type="Node2D" parent="."]
+position = Vector2(370, 450)
+script = ExtResource("TreeScript")
+
+[node name="Tree4" type="Node2D" parent="."]
+position = Vector2(470, 420)
+script = ExtResource("TreeScript")
+
+[node name="OreVein" type="Node2D" parent="."]
+position = Vector2(440, 290)
+script = ExtResource("VeinScript")
+
+[node name="OreVein2" type="Node2D" parent="."]
+position = Vector2(720, 440)
+script = ExtResource("VeinScript")
+
+[node name="GoldVein" type="Node2D" parent="."]
+position = Vector2(680, 190)
+script = ExtResource("VeinScript")
+resource_kind = "gold"
+
+[node name="Worker1" parent="." instance=ExtResource("WorkerScene")]
+position = Vector2(190, 220)
+team = 1
+job = "wood"
+
+[node name="Worker2" parent="." instance=ExtResource("WorkerScene")]
+position = Vector2(190, 370)
+team = 1
+job = "wood"
+
+[node name="Worker3" parent="." instance=ExtResource("WorkerScene")]
+position = Vector2(190, 270)
+team = 1
+job = "ore"
+
+[node name="Worker4" parent="." instance=ExtResource("WorkerScene")]
+position = Vector2(190, 320)
+team = 1
+job = "gold"
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(450, 280)
+
+[node name="Hud" type="CanvasLayer" parent="."]
+
+[node name="Store" type="Label" parent="Hud"]
+offset_left = 12.0
+offset_top = 8.0
+offset_right = 400.0
+offset_bottom = 34.0
+theme_override_font_sizes/font_size = 18
+text = "wood 0   ore 0   gold 0"

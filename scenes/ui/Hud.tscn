@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="HudScript"]
+[ext_resource type="Script" path="res://scripts/ui/player_input_adapter.gd" id="InputScript"]
+
+[node name="Hud" type="CanvasLayer"]
+script = ExtResource("HudScript")
+
+[node name="PlayerInput" type="Node2D" parent="."]
+script = ExtResource("InputScript")

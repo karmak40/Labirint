@@ -1,0 +1,137 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="PlayerScene"]
+[ext_resource type="PackedScene" path="res://scenes/knight/Knight.tscn" id="KnightScene"]
+[ext_resource type="Script" path="res://scripts/floor_grid.gd" id="FloorGridScript"]
+[ext_resource type="Script" path="res://scripts/debug_panel.gd" id="DebugPanelScript"]
+[ext_resource type="Script" path="res://scripts/rock.gd" id="RockScript"]
+[ext_resource type="Script" path="res://scripts/beam.gd" id="BeamScript"]
+[ext_resource type="Script" path="res://scripts/tree.gd" id="TreeScript"]
+[ext_resource type="Script" path="res://scripts/ore_vein.gd" id="VeinScript"]
+[ext_resource type="Script" path="res://scripts/dummy.gd" id="DummyScript"]
+[ext_resource type="Script" path="res://scripts/beast.gd" id="BeastScript"]
+[ext_resource type="Script" path="res://scripts/chicken.gd" id="ChickenScript"]
+[ext_resource type="Script" path="res://scripts/sheep.gd" id="SheepScript"]
+[ext_resource type="Script" path="res://scripts/campfire.gd" id="FireScript"]
+
+[sub_resource type="RectangleShape2D" id="WallHorizontal"]
+size = Vector2(940, 20)
+
+[sub_resource type="RectangleShape2D" id="WallVertical"]
+size = Vector2(20, 600)
+
+[node name="Main" type="Node2D"]
+y_sort_enabled = true
+
+[node name="FloorBorder" type="ColorRect" parent="."]
+offset_left = -4.0
+offset_top = -4.0
+offset_right = 904.0
+offset_bottom = 564.0
+color = Color(0.1255, 0.1373, 0.1647, 1)
+
+[node name="Floor" type="ColorRect" parent="."]
+offset_right = 900.0
+offset_bottom = 560.0
+color = Color(0.3373, 0.3647, 0.4275, 1)
+
+[node name="GridOverlay" type="Node2D" parent="."]
+script = ExtResource("FloorGridScript")
+
+[node name="Walls" type="StaticBody2D" parent="."]
+
+[node name="Top" type="CollisionShape2D" parent="Walls"]
+position = Vector2(450, -10)
+shape = SubResource("WallHorizontal")
+
+[node name="Bottom" type="CollisionShape2D" parent="Walls"]
+position = Vector2(450, 570)
+shape = SubResource("WallHorizontal")
+
+[node name="Left" type="CollisionShape2D" parent="Walls"]
+position = Vector2(-10, 280)
+shape = SubResource("WallVertical")
+
+[node name="Right" type="CollisionShape2D" parent="Walls"]
+position = Vector2(910, 280)
+shape = SubResource("WallVertical")
+
+[node name="Rock" type="Node2D" parent="."]
+position = Vector2(330, 300)
+script = ExtResource("RockScript")
+
+[node name="Rock2" type="Node2D" parent="."]
+position = Vector2(620, 380)
+script = ExtResource("RockScript")
+
+[node name="Beam" type="Node2D" parent="."]
+position = Vector2(230, 430)
+script = ExtResource("BeamScript")
+
+[node name="Tree1" type="Node2D" parent="."]
+position = Vector2(690, 250)
+script = ExtResource("TreeScript")
+
+[node name="Tree2" type="Node2D" parent="."]
+position = Vector2(800, 430)
+script = ExtResource("TreeScript")
+
+[node name="Tree3" type="Node2D" parent="."]
+position = Vector2(140, 255)
+script = ExtResource("TreeScript")
+
+[node name="Vein1" type="Node2D" parent="."]
+position = Vector2(300, 470)
+script = ExtResource("VeinScript")
+
+[node name="Vein2" type="Node2D" parent="."]
+position = Vector2(560, 150)
+script = ExtResource("VeinScript")
+
+[node name="Dummy1" type="Node2D" parent="."]
+position = Vector2(420, 400)
+script = ExtResource("DummyScript")
+facing_x = -1.0
+
+[node name="Dummy2" type="Node2D" parent="."]
+position = Vector2(660, 330)
+script = ExtResource("DummyScript")
+facing_x = 1.0
+
+[node name="Beast" type="Node2D" parent="."]
+position = Vector2(450, 500)
+script = ExtResource("BeastScript")
+
+[node name="Hen1" type="Node2D" parent="."]
+position = Vector2(210, 350)
+script = ExtResource("ChickenScript")
+
+[node name="Hen2" type="Node2D" parent="."]
+position = Vector2(520, 245)
+script = ExtResource("ChickenScript")
+patrol = 85.0
+pace = 28.0
+
+[node name="Knight" parent="." instance=ExtResource("KnightScene")]
+position = Vector2(700, 470)
+patrol = 110.0
+
+[node name="Ewe1" type="Node2D" parent="."]
+position = Vector2(360, 195)
+script = ExtResource("SheepScript")
+
+[node name="Ewe2" type="Node2D" parent="."]
+position = Vector2(180, 500)
+script = ExtResource("SheepScript")
+patrol = 110.0
+
+[node name="Campfire" type="Node2D" parent="."]
+position = Vector2(255, 175)
+script = ExtResource("FireScript")
+
+[node name="Player" parent="." instance=ExtResource("PlayerScene")]
+position = Vector2(450, 280)
+
+[node name="DebugPanel" type="CanvasLayer" parent="."]
+script = ExtResource("DebugPanelScript")
+player_path = NodePath("../Player")

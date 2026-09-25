@@ -1,0 +1,127 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scripts/player3d.gd" id="Player3DScript"]
+[ext_resource type="Script" path="res://scripts/walker3d.gd" id="Walker3DScript"]
+[ext_resource type="Script" path="res://scripts/debug_panel.gd" id="DebugPanelScript"]
+
+[sub_resource type="Environment" id="Env"]
+background_mode = 1
+background_color = Color(0.07, 0.08, 0.11, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.42, 0.46, 0.55, 1)
+ambient_light_energy = 0.9
+
+[sub_resource type="StandardMaterial3D" id="FloorMat"]
+albedo_color = Color(0.34, 0.36, 0.43, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="WallMat"]
+albedo_color = Color(0.2, 0.22, 0.27, 1)
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="FloorMesh"]
+size = Vector3(18, 0.2, 11.2)
+
+[sub_resource type="BoxShape3D" id="FloorShape"]
+size = Vector3(18, 0.2, 11.2)
+
+[sub_resource type="BoxMesh" id="WallLongMesh"]
+size = Vector3(18.4, 1, 0.4)
+
+[sub_resource type="BoxShape3D" id="WallLongShape"]
+size = Vector3(18.4, 1, 0.4)
+
+[sub_resource type="BoxMesh" id="WallSideMesh"]
+size = Vector3(0.4, 1, 11.2)
+
+[sub_resource type="BoxShape3D" id="WallSideShape"]
+size = Vector3(0.4, 1, 11.2)
+
+[sub_resource type="CapsuleShape3D" id="BodyShape"]
+radius = 0.26
+height = 1.2
+
+[node name="Main3D" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.95, 0.6, 0)
+light_energy = 1.1
+shadow_enabled = true
+
+[node name="Fill" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.5, -2.2, 0)
+light_energy = 0.35
+
+[node name="Floor" type="StaticBody3D" parent="."]
+position = Vector3(0, -0.1, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("FloorMesh")
+material_override = SubResource("FloorMat")
+
+[node name="Shape" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("FloorShape")
+
+[node name="WallNorth" type="StaticBody3D" parent="."]
+position = Vector3(0, 0.5, -5.8)
+
+[node name="Mesh" type="MeshInstance3D" parent="WallNorth"]
+mesh = SubResource("WallLongMesh")
+material_override = SubResource("WallMat")
+
+[node name="Shape" type="CollisionShape3D" parent="WallNorth"]
+shape = SubResource("WallLongShape")
+
+[node name="WallSouth" type="StaticBody3D" parent="."]
+position = Vector3(0, 0.5, 5.8)
+
+[node name="Mesh" type="MeshInstance3D" parent="WallSouth"]
+mesh = SubResource("WallLongMesh")
+material_override = SubResource("WallMat")
+
+[node name="Shape" type="CollisionShape3D" parent="WallSouth"]
+shape = SubResource("WallLongShape")
+
+[node name="WallWest" type="StaticBody3D" parent="."]
+position = Vector3(-9.2, 0.5, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="WallWest"]
+mesh = SubResource("WallSideMesh")
+material_override = SubResource("WallMat")
+
+[node name="Shape" type="CollisionShape3D" parent="WallWest"]
+shape = SubResource("WallSideShape")
+
+[node name="WallEast" type="StaticBody3D" parent="."]
+position = Vector3(9.2, 0.5, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="WallEast"]
+mesh = SubResource("WallSideMesh")
+material_override = SubResource("WallMat")
+
+[node name="Shape" type="CollisionShape3D" parent="WallEast"]
+shape = SubResource("WallSideShape")
+
+[node name="Player3D" type="CharacterBody3D" parent="."]
+position = Vector3(0, 0.05, 0)
+script = ExtResource("Player3DScript")
+
+[node name="Shape" type="CollisionShape3D" parent="Player3D"]
+position = Vector3(0, 0.6, 0)
+shape = SubResource("BodyShape")
+
+[node name="Rig" type="Node3D" parent="Player3D"]
+script = ExtResource("Walker3DScript")
+
+[node name="Camera3D" type="Camera3D" parent="Player3D"]
+position = Vector3(0, 5.14, 4.24)
+rotation = Vector3(-0.7854, 0, 0)
+fov = 55.0
+current = true
+
+[node name="DebugPanel" type="CanvasLayer" parent="."]
+script = ExtResource("DebugPanelScript")
+player_path = NodePath("../Player3D")
