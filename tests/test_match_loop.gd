@@ -31,6 +31,7 @@ func step() -> bool:
 		1:
 			if playing():
 				silence(Team.Id.ENEMY)
+				raise_barracks(Team.Id.PLAYER)
 				hud = current_scene.get_node("Hud")
 				var e: Economy = gs.human().economy
 				e.add("wood", 200)
@@ -39,7 +40,7 @@ func step() -> bool:
 				check(card != null, "the HUD has a warrior card")
 				for i in 5:
 					card.pressed.emit()
-				check(gs.human().barracks().queue.count("warrior") == 5, "five warriors hired from the card", gs.human().barracks().queue)
+				check(gs.human().drafts_of("warrior") == 5, "five warriors ordered from the card", gs.human().drafts.size())
 				hud._refresh()
 				check(find_card(hud, "knight").disabled, "the knight card is locked until chivalry is learned")
 				stage = 2

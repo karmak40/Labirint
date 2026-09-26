@@ -106,6 +106,13 @@ func _on_match_started() -> void:
 			pile.received.connect(_on_banked)
 	if human != null and human.barracks() != null:
 		human.barracks().unit_ready.connect(_on_hired)
+	# and a barracks put up during the match
+	if game.has_signal("built") and not game.built.is_connected(_on_built):
+		game.built.connect(_on_built)
+
+func _on_built(team: int, _kind: String, building: Building) -> void:
+	if team == game.human_team and building is ProductionBuilding and not building.unit_ready.is_connected(_on_hired):
+		building.unit_ready.connect(_on_hired)
 
 func _on_node_added(node: Node) -> void:
 	# a recruit's _ready has not run yet here, so wait for it to join its groups

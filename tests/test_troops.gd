@@ -28,6 +28,7 @@ func step() -> bool:
 			if not playing():
 				return false
 			silence(Team.Id.ENEMY)
+			raise_barracks(Team.Id.PLAYER)
 			var me: PlayerState = gs.human()
 			me.economy.add("wood", 300)
 			me.economy.add("ore", 300)
@@ -37,7 +38,9 @@ func step() -> bool:
 			check(not me.prerequisite_met("crossbows"), "crossbows can not be learned before bows")
 			me.researched["archery"] = true
 			check(me.prerequisite_met("crossbows"), "and can once bows are known")
-			check(gs.hire(1, "archer"), "an archer can be hired once bows are known")
+			check(not gs.hire(1, "archer"), "but not without a forge to make the bow")
+			raise_forge(Team.Id.PLAYER)
+			check(gs.hire(1, "archer"), "an archer can be ordered once bows are known and a forge stands")
 			# two shooters on open ground in the middle, each with a mark held
 			# still off their own row
 			for spec in [["archer", Vector2(1200, 200), Vector2(1350, 320)], ["crossbowman", Vector2(1200, 420), Vector2(1370, 300)]]:

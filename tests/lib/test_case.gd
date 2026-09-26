@@ -107,6 +107,46 @@ func silence(team: int) -> void:
 	if side != null and side.has_node("AIDirector"):
 		side.get_node("AIDirector").queue_free()
 
+## A finished barracks for `team` on the spot its map clears for one, for tests
+## that hire soldiers and are not about building (the long map starts without).
+func raise_barracks(team: int) -> ProductionBuilding:
+	var side = game().side(team)
+	if side.barracks() != null:
+		return side.barracks()
+	var field = game().field()
+	var layout: SideLayout = field.map.player if team == Team.Id.PLAYER else field.map.enemy
+	var barracks := ProductionBuilding.new()
+	barracks.team = team
+	barracks.position = layout.barracks
+	field.add_child(barracks)
+	side.adopt(barracks)
+	# as if it had been put up: whatever listens for new buildings hears of it
+	game().built.emit(team, "barracks", barracks)
+	var nav = field.get_node_or_null("NavFloor")
+	if nav != null:
+		nav.rebake(true)
+	return barracks
+
+## A finished forge for `team`, stood up at once next to where its barracks
+## goes, for tests that order soldiers who need arms.
+func raise_forge(team: int) -> Forge:
+	var side = game().side(team)
+	if side.forge() != null:
+		return side.forge()
+	var field = game().field()
+	var layout: SideLayout = field.map.player if team == Team.Id.PLAYER else field.map.enemy
+	var toward := signf(layout.barracks.x - layout.base.x)
+	var smithy := Forge.new()
+	smithy.team = team
+	smithy.position = layout.barracks + Vector2(toward * 170.0, 0.0)
+	field.add_child(smithy)
+	side.adopt(smithy)
+	game().built.emit(team, "forge", smithy)
+	var nav = field.get_node_or_null("NavFloor")
+	if nav != null:
+		nav.rebake(true)
+	return smithy
+
 func find_button(under: Node, text: String) -> Button:
 	for node in under.find_children("*", "Button", true, false):
 		var button := node as Button

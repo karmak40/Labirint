@@ -63,9 +63,11 @@ func _think() -> void:
 	_put_up(me)
 	# learning comes before hiring: it is the one thing it cannot catch up on later
 	var study := _next_study(me)
-	if study != "":
+	if study != "" and not _saving_for_forge(me):
 		game.research(team, study)
+	_rebalance(me)
 	_hire(me)
+	_arm(me)
 	if _guard_home(me):
 		return
 	_wage_war(me)
@@ -88,11 +90,17 @@ func _next_hire(me: PlayerState) -> String:
 		if hands[trade] < first[trade]:
 			return TRADE_KIND[trade]
 	var soldier := _soldier_kind(me)
+	# no soldier without a barracks: until it stands, only hands for its price
+	if not me.has_barracks_site():
+		return _hands_for(me, hands, game.BUILDINGS["barracks"]["cost"])
 	# a library comes first: without one nothing can ever be learned, and wood
 	# spent on clubs as fast as it comes in never adds up to one
 	if _saving_for_library(me):
 		return _hands_for(me, hands, game.BUILDINGS["library"]["cost"])
 	# the next study's price is being put by instead of spent on one more club
+	# so is a forge's, once the first study is in
+	if _saving_for_forge(me):
+		return _hands_for(me, hands, game.BUILDINGS["forge"]["cost"])
 	if _saving_for_study(me):
 		return _hands_for(me, hands, PlayerState.RESEARCH[_next_study(me)]["cost"])
 	# once there is an army or a library, somebody starts on the gold it will want
@@ -101,13 +109,14 @@ func _next_hire(me: PlayerState) -> String:
 		return TRADE_KIND["gold"]
 	# short of what a soldier costs: more hands on that, rather than waiting on
 	# a trickle for ever while the other store piles up
-	var price: Dictionary = ProductionBuilding.CATALOG[soldier]["cost"]
+	var price := me.draft_price(soldier)
 	for resource in price:
 		if me.economy.amount(resource) < int(price[resource]) \
 				and full.has(resource) and hands[resource] < full[resource]:
 			return TRADE_KIND[resource]
-	# then soldiers, as long as the next wave is not yet up to strength
-	if _at_home(me).size() < wave_size:
+	# then soldiers, as long as the next wave is not yet up to strength --
+	# counting the ones already on order, on their way from the forge
+	if _at_home(me).size() + _coming(me) < wave_size:
 		return soldier
 	for trade in full:
 		if hands[trade] < full[trade]:
@@ -133,14 +142,32 @@ func _wants_gold(me: PlayerState) -> bool:
 	return false
 
 func _saving_for_library(me: PlayerState) -> bool:
-	return not (plan["studies"] as Array).is_empty() and me.workers().size() >= int(plan["library_after"]) \
-		and not me.has_library_site() and not me.economy.can_afford(game.BUILDINGS["library"]["cost"])
+	return _time_for_library(me) and not me.economy.can_afford(game.BUILDINGS["library"]["cost"])
+
+## Something to learn, enough hands at work, and no library yet -- and for a
+## head that means to strike first (`library_after_wave`), its first wave out.
+func _time_for_library(me: PlayerState) -> bool:
+	if (plan["studies"] as Array).is_empty() or me.has_library_site() or not me.has_barracks_site():
+		return false
+	if me.workers().size() < int(plan["library_after"]):
+		return false
+	return not bool(plan.get("library_after_wave", false)) or attacking or wave_size > int(plan["first_wave"])
 
 ## Kept under its old name too, for anything that asked it.
 func _saving_for_chivalry(me: PlayerState) -> bool:
 	return _saving_for_study(me)
 
+## A forge comes after the first study -- every soldier past the warrior
+## carries arms made there -- and is put by for like one.
+func _wants_forge(me: PlayerState) -> bool:
+	return me.library() != null and not me.researched.is_empty() and not me.has_forge_site()
+
+func _saving_for_forge(me: PlayerState) -> bool:
+	return _wants_forge(me) and not me.economy.can_afford(game.BUILDINGS["forge"]["cost"])
+
 func _saving_for_study(me: PlayerState) -> bool:
+	if _saving_for_forge(me):
+		return false
 	var study := _next_study(me)
 	if study == "" or me.researching != "" or me.library() == null:
 		return false
@@ -160,16 +187,88 @@ func _next_study(me: PlayerState) -> String:
 ## then towers in front of the castle: straight away for a cautious head, once
 ## there is an army to spare the wood for the rest.
 func _put_up(me: PlayerState) -> void:
-	if not (plan["studies"] as Array).is_empty() and me.workers().size() >= int(plan["library_after"]) \
-			and not me.has_library_site():
+	# a barracks before anything: without it there is no army at all
+	if not me.has_barracks_site():
+		if me.workers().size() >= _first_hands() and me.economy.can_afford(game.BUILDINGS["barracks"]["cost"]):
+			_build_near(me, "barracks", 230.0)
+		return
+	if _time_for_library(me):
 		_build_near(me, "library", 420.0)
 		return
+	# then a forge, after the first study
+	if _wants_forge(me) and me.economy.can_afford(game.BUILDINGS["forge"]["cost"]):
+		_build_near(me, "forge", 300.0)
+		return
 	var towers := _towers(me)
-	var time_for_towers: bool = me.library() != null \
-		and (bool(plan["towers_early"]) or wave_size > int(plan["first_wave"]))
-	if time_for_towers and towers < int(plan["towers"]):
+	if _wants_towers(me):
 		# the first two either side of the way in, any more out in front of them
 		_build_near(me, "tower", 540.0 + 110.0 * float(towers / 2))
+
+## Towers it means to have and has not put up yet: a cautious head wants them
+## as soon as the library stands, the rest once there is an army to spare.
+func _wants_towers(me: PlayerState) -> bool:
+	var time_for_towers: bool = me.library() != null \
+		and (bool(plan["towers_early"]) or wave_size > int(plan["first_wave"]))
+	return time_for_towers and _towers(me) < int(plan["towers"])
+
+## Smiths at the anvils, then kit for the ranks in the order its plan likes,
+## one piece a thought -- only what somebody could wear, and never out of a
+## price being put by, nor out of towers still to be put up -- and with the
+## forge idle and the store full, a few weapons made ahead for the next wave.
+func _arm(me: PlayerState) -> void:
+	var smithy := me.forge()
+	# nothing is made without a hand at an anvil; a forge has two, and the
+	# trades they come from are hired back up in the ordinary way
+	while smithy != null and not me.free_anvil().is_empty() and me.workers().size() - me.smiths().size() > _first_hands():
+		if not game.assign_smith(team):
+			break
+	if smithy == null or smithy.all_pending().size() >= 2 or _saving_for_library(me) or _saving_for_study(me) \
+			or _wants_towers(me):
+		return
+	for item in plan["gear"]:
+		if me.short_of(item) > me.spare(item) + me.pending(item):
+			if game.forge(team, item):
+				return
+	# arms ahead, for the kind it will want next, while it can afford two of him
+	var next := _soldier_kind(me)
+	if smithy.all_pending().is_empty() and me.economy.can_afford(_twice(me.draft_price(next))):
+		for item in ProductionBuilding.CATALOG[next].get("arms", []):
+			if Forge.GEAR.has(item) and me.spare(item) < STOCK:
+				game.forge(team, item)
+				return
+
+## How many of each weapon it likes to keep made ahead.
+const STOCK := 2
+
+static func _twice(price: Dictionary) -> Dictionary:
+	var double := {}
+	for resource in price:
+		double[resource] = int(price[resource]) * 2
+	return double
+
+## Soldiers on order or training: on their way to the ranks.
+func _coming(me: PlayerState) -> int:
+	var barracks := me.barracks()
+	return me.drafts.size() + (barracks.queue.size() if barracks != null else 0)
+
+## Labourers are all alike, so a store piling up while the other runs dry
+## is put right by moving a hand across, rather than by hiring another.
+const GLUT := 80               ## how far ahead one store has to be
+
+func _rebalance(me: PlayerState) -> void:
+	var count := me.hands()
+	var e := me.economy
+	if e.ore > e.wood + GLUT and int(count["ore"]) > 1:
+		game.assign_worker(team, "wood")
+	elif e.wood > e.ore + GLUT and int(count["wood"]) > 1:
+		game.assign_worker(team, "ore")
+
+## How many hands its plan puts to work before anything else.
+func _first_hands() -> int:
+	var total := 0
+	for trade in plan["workers_first"]:
+		total += int(plan["workers_first"][trade])
+	return total
 
 func _towers(me: PlayerState) -> int:
 	var count := 0
@@ -199,7 +298,8 @@ func _field_middle() -> float:
 	return (foe.base().global_position.x + me.base().global_position.x) * 0.5
 
 ## The soldier its army is shortest of, going by the mix its plan likes, of those
-## it knows how to field; clubs only if the plan wants them or nothing better is open.
+## it knows how to field -- and can arm: without a forge only clubs; clubs also
+## if the plan wants them or nothing better is open.
 func _soldier_kind(me: PlayerState) -> String:
 	var barracks := me.barracks()
 	if barracks == null:
@@ -209,11 +309,16 @@ func _soldier_kind(me: PlayerState) -> String:
 		have[unit.loadout] = int(have.get(unit.loadout, 0)) + 1
 	for kind in barracks.queue:
 		have[kind] = int(have.get(kind, 0)) + 1
+	for draft in me.drafts:
+		have[draft.kind] = int(have.get(draft.kind, 0)) + 1
+	var armed := me.forge() != null
 	var mix: Dictionary = plan["mix"]
 	var best := "warrior"
 	var best_share := INF
 	for kind in mix:
-		if not barracks.is_unlocked(kind):
+		if not me.kind_unlocked(kind):
+			continue
+		if not armed and not me.missing_for(kind).is_empty():
 			continue
 		var share := float(have.get(kind, 0)) / float(mix[kind])
 		if share < best_share:
@@ -226,9 +331,9 @@ func _hands(me: PlayerState) -> Dictionary:
 	for hand in me.workers():
 		count[hand.job] = count.get(hand.job, 0) + 1
 	# the ones still in the queue count too, or it would hire the same hand twice
-	var barracks := me.barracks()
-	if barracks != null:
-		for kind in barracks.queue:
+	var keep := me.base()
+	if keep != null:
+		for kind in keep.queue:
 			var job: String = ProductionBuilding.CATALOG[kind].get("job", "")
 			if job != "":
 				count[job] = count.get(job, 0) + 1

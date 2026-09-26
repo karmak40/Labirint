@@ -44,7 +44,26 @@ const LOADOUTS := {
 	"spearman": {"weapon": Weapon.SPEAR, "helm": true, "armour": false, "health": 1.15, "skill": 2},
 	"archer": {"weapon": Weapon.BOW, "helm": false, "armour": false, "health": 0.9, "skill": 2, "reach": 220.0},
 	"crossbowman": {"weapon": Weapon.CROSSBOW, "helm": true, "armour": false, "health": 1.0, "skill": 1, "reach": 250.0},
+	"axeman": {"weapon": Weapon.AXE, "helm": false, "armour": false, "health": 1.1, "skill": 2, "siege": 1.5},
+	"swordsman": {"weapon": Weapon.SWORD, "helm": true, "armour": false, "health": 1.2, "skill": 2},
+	"greatsword": {"weapon": Weapon.GREATSWORD, "helm": true, "armour": true, "health": 1.4, "skill": 2},
+	"scout": {"weapon": Weapon.DAGGER, "helm": false, "armour": false, "health": 0.8, "skill": 3, "speed": 1.3, "hunts": true},
+	"torchbearer": {"weapon": Weapon.TORCH, "helm": false, "armour": false, "health": 0.9, "skill": 1, "siege": 4.0},
+	"mage": {"weapon": Weapon.STAFF, "helm": false, "armour": false, "health": 0.8, "skill": 1, "reach": 260.0, "mends": true},
 }
+## Optional keys: `siege` multiplies its blows against buildings, `speed` its
+## pace, `hunts` makes it go for the other side's labourers first, and `mends`
+## lets it heal once its side has learned how («Исцеление»).
+
+## Healing. Who gets it depends on how things stand: out of a fight anyone
+## scratched is seen to; in one only someone near death is worth breaking off
+## for; and with an enemy at its own elbow it does neither.
+const MEND_REACH := 200.0
+const MEND_AMOUNT := 30.0
+const MEND_EVERY := 1.6        ## seconds between casts
+const MEND_LOOK := 0.4         ## how often it looks round when nobody needed it
+const MEND_WOUNDED := 0.85     ## the share of health under which, at peace, it heals
+const MEND_URGENT := 0.45      ## and under which it breaks off a fight to
 const SHOOTER_CLOSE := 90.0    ## nearer than this a shooter steps back before loosing
 const SHOOTER_RECOVER := 0.4   ## and a breath between shots
 const AIM_LEAD := 0.35         ## seconds of the mark's running it aims ahead by
@@ -106,6 +125,9 @@ func _ready() -> void:
 ## blows, a tougher hide. Health keeps its share, so a wounded man stays wounded.
 var harm_scale := 1.0
 var health_scale := 1.0
+var can_mend := false          ## a healer whose side has learned to heal
+var mending: PlayerBody = null ## who the cast under way is for
+var mend_left := 0.0
 
 func set_scales(harm: float, toughness: float) -> void:
 	harm_scale = harm
@@ -119,6 +141,135 @@ func set_scales(harm: float, toughness: float) -> void:
 func strike_harm() -> float:
 	return super() * harm_scale
 
+## A torch or an axe does more to a wall than to a man.
+func harm_against(mark: Node) -> float:
+	var harm := strike_harm()
+	if mark is Building:
+		harm *= float(LOADOUTS.get(loadout, {}).get("siege", 1.0))
+	return harm
+
+## In a match the torch is for the enemy's walls: it does not set the forest,
+## everyone's timber, alight.
+func torch_strike() -> void:
+	pass
+
+## Whether this kind can heal and its side knows how (PlayerState.kit_out).
+func set_mending(known: bool) -> void:
+	can_mend = known and bool(LOADOUTS.get(loadout, {}).get("mends", false))
+
+## Takes over this moment if someone needs healing more than the fight needs it.
+func _mend(delta: float) -> bool:
+	mend_left -= delta
+	if not can_mend:
+		return false
+	if mending != null:
+		if is_attacking():
+			_face(mending)
+			return true
+		mending = null
+	if is_attacking() or mend_left > 0.0 or not can_strike():
+		return false
+	if quarry != null and global_position.distance_to(Team.spot(quarry, global_position)) < SHOOTER_CLOSE:
+		return false
+	var fighting := watch == Watch.FIGHTING and quarry != null
+	var patient := _most_hurt(MEND_URGENT if fighting else MEND_WOUNDED)
+	if patient == null:
+		mend_left = MEND_LOOK
+		return false
+	mending = patient
+	aim_point = patient.global_position
+	_face(patient)
+	attack()
+	mend_left = MEND_EVERY
+	watch_time = 0.0
+	return true
+
+## The worst hurt of its own side within reach, itself included, if any is
+## below `share` of its health.
+func _most_hurt(share: float) -> PlayerBody:
+	var best: PlayerBody = null
+	var best_share := share
+	for node in get_tree().get_nodes_in_group("targets"):
+		var body := node as PlayerBody
+		if body == null or body.is_dead or not Team.allied(team, Team.of(body)):
+			continue
+		if global_position.distance_to(body.global_position) > MEND_REACH:
+			continue
+		var left := body.health / body.health_max
+		if left < best_share:
+			best_share = left
+			best = body
+	return best
+
+# --- kit that keeps blows off ---------------------------------------------------
+
+## What each piece keeps off a blow. They add up: a knight's helm and plate
+## together let through 0.72 of it, and his shield less again from the front.
+const HELM_GUARD := 0.9
+const ARMOUR_GUARD := 0.8
+const SHIELD_GUARD := 0.7      ## only a blow or a shot from in front, onto the shield
+const GEAR := ["helm", "armour", "shield"]
+
+func take_hit(from: Vector2 = Vector2.INF, damage: float = 10.0) -> void:
+	super(from, damage * guard_against(from))
+
+## The share of a blow from `from` that gets through its kit.
+func guard_against(from: Vector2) -> float:
+	var share := 1.0
+	if helm == Helm.WORN:
+		share *= HELM_GUARD
+	if wears_armour():
+		share *= ARMOUR_GUARD
+	if has_shield() and from.x < INF and absf(from.x - global_position.x) > 1.0 			and signf(from.x - global_position.x) == signf(facing_x):
+		share *= SHIELD_GUARD
+	return share
+
+func wears_armour() -> bool:
+	return rig != null and rig.armoured
+
+func has_shield() -> bool:
+	return weapon == Weapon.SWORD_SHIELD or (shielded and SHIELD_WEAPONS.has(weapon))
+
+## Whether a piece from the forge would be any use to it.
+func can_wear(item: String) -> bool:
+	if is_dead:
+		return false
+	match item:
+		"helm":
+			return helm != Helm.WORN
+		"armour":
+			return not wears_armour()
+		"shield":
+			return not has_shield() and SHIELD_WEAPONS.has(weapon)
+	return false
+
+func wear(item: String) -> void:
+	match item:
+		"helm":
+			helm = Helm.WORN
+		"armour":
+			if rig != null:
+				rig.armoured = true
+		"shield":
+			shielded = true
+
+## Called by the rig as the staff casts: a heal goes out instead of a bolt.
+func release_mend() -> bool:
+	if mending == null:
+		return false
+	var patient := mending
+	mending = null
+	if is_instance_valid(patient) and not patient.is_dead 			and global_position.distance_to(patient.global_position) < MEND_REACH * 1.3:
+		patient.health = minf(patient.health_max, patient.health + MEND_AMOUNT)
+		var glow := MendGlow.new()
+		glow.patient = patient
+		glow.source = global_position + Vector2(0.0, -58.0)
+		get_parent().add_child(glow)
+	return true
+
+func _hunts() -> bool:
+	return bool(LOADOUTS.get(loadout, {}).get("hunts", false))
+
 func _kit_out() -> void:
 	var kit: Dictionary = LOADOUTS.get(loadout, LOADOUTS["knight"])
 	weapon = kit["weapon"]
@@ -127,6 +278,7 @@ func _kit_out() -> void:
 	skills[weapon] = int(kit["skill"])
 	health_max = HEALTH_MAX * float(kit["health"])
 	health = health_max
+	speed *= float(kit.get("speed", 1.0))
 	if rig != null:
 		rig.armoured = bool(kit["armour"])
 
@@ -175,6 +327,9 @@ func _decide(delta: float) -> void:
 	if scan_left <= 0.0 or (quarry != null and not _still_minding(quarry)):
 		scan_left = SCAN_EVERY
 		quarry = _who_to_watch()
+
+	if _mend(delta):
+		return
 
 	match watch:
 		Watch.PATROL:
@@ -238,6 +393,8 @@ func _who_to_watch() -> Node2D:
 			distance += WALL_BIAS
 		# sent somewhere to fight, it does not wander off after every woodcutter
 		# on the way -- only the ones it all but walks into
+		elif candidate is Worker and _hunts():
+			distance -= HAND_BIAS
 		elif candidate is Worker and order == Order.ATTACK_MOVE:
 			distance += HAND_BIAS
 		if distance < best_distance:
@@ -307,7 +464,7 @@ func _fight() -> void:
 		attack()
 		watch_time = 0.0
 
-## A bow or a crossbow: stand off at a bowshot, back away (facing them) from
+## A bow, a crossbow or a staff: stand off at a bowshot, back away (facing them) from
 ## anyone who closes, and loose at where the mark will be. A crossbow's attack
 ## spans it when it is empty, so the same call does both.
 func _shoot() -> void:

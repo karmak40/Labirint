@@ -1,7 +1,7 @@
 extends "res://tests/lib/test_case.gd"
 ## Skirmish.tscn stands the long map up from its data: everything the map lists
-## is on the field, each side has its castle and barracks and nothing else, no
-## workers, the starting store, a baked floor -- and the landscape under it.
+## is on the field, each side has its castle and nothing else (no barracks, no
+## workers), the starting store, a baked floor -- and the landscape under it.
 
 func begin() -> void:
 	time_limit = 60 * 20
@@ -23,7 +23,7 @@ func step() -> bool:
 	for team in [Team.Id.PLAYER, Team.Id.ENEMY]:
 		var side: PlayerState = game().side(team)
 		check(side != null, "side %d is registered" % team)
-		check(side.base() != null and side.barracks() != null, "side %d has its castle and barracks" % team)
+		check(side.base() != null and side.barracks() == null, "side %d has its castle and no barracks yet" % team)
 		var towers := 0
 		for b in side.buildings:
 			if b is Tower: towers += 1

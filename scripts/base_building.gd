@@ -1,7 +1,9 @@
 class_name Base
-extends Building
+extends ProductionBuilding
 ## A side's castle. Lose it and the match is lost: that is the only thing about it
 ## anything else needs to know, and it says so once, through `base_destroyed`.
+## It is also where labourers are hired (ProductionBuilding.LABOURERS): the
+## barracks, for soldiers, has to be built.
 ##
 ## Big on purpose -- half the screen high, the thing the whole match is about.
 ## Its footprint is the curtain wall's base: that is what blocks the way and what
@@ -14,9 +16,9 @@ const STONE := Color(0.52, 0.51, 0.49)
 const STONE_LIT := Color(0.60, 0.59, 0.57)
 const STONE_DARK := Color(0.40, 0.39, 0.38)
 const STONE_EDGE := Color(0.27, 0.26, 0.26)
-const ROOF := Color(0.33, 0.30, 0.34)
-const ROOF_EDGE := Color(0.22, 0.20, 0.23)
-const DOOR := Color(0.18, 0.13, 0.09)
+const KEEP_ROOF := Color(0.33, 0.30, 0.34)
+const KEEP_ROOF_EDGE := Color(0.22, 0.20, 0.23)
+const GATE_DOOR := Color(0.18, 0.13, 0.09)
 const IRON := Color(0.30, 0.30, 0.32)
 const SLIT := Color(0.14, 0.13, 0.14)
 const POLE := Color(0.30, 0.23, 0.16)
@@ -35,10 +37,16 @@ func _init() -> void:
 	footprint = Vector2(300.0, 110.0)
 	bar_height = 300.0
 	bar_width = 180.0
+	kinds = PackedStringArray(LABOURERS)
+	redraw_while_hiring = false
 
 func _ready() -> void:
 	super()
 	add_to_group("bases")
+
+## Out of the gate, clear of the wall's footprint.
+func _door() -> Vector2:
+	return Vector2(0.0, footprint.y * 0.5 + 22.0)
 
 ## Gates barred: no blow does it any harm. A siege opens them when it is time
 ## (RoomRules); a castle out in the field is never shut.
@@ -85,8 +93,8 @@ func _draw_standing() -> void:
 	draw_arc(Vector2(0.0, foot - 118.0), 17.0, 0.0, TAU, 28, STONE_EDGE, 2.0, true)
 	# and the gate: an arch, a portcullis in it -- let right down when shut
 	var gate_half := 22.0
-	draw_rect(Rect2(-gate_half, foot - 52.0, gate_half * 2.0, 52.0), DOOR)
-	draw_circle(Vector2(0.0, foot - 52.0), gate_half, DOOR)
+	draw_rect(Rect2(-gate_half, foot - 52.0, gate_half * 2.0, 52.0), GATE_DOOR)
+	draw_circle(Vector2(0.0, foot - 52.0), gate_half, GATE_DOOR)
 	for i in range(-2, 3):
 		draw_line(Vector2(i * 8.0, foot - 70.0), Vector2(i * 8.0, foot), IRON, 2.0)
 	for i in 3:
@@ -127,9 +135,9 @@ func _slits(left: float, right: float, y: float, count: int) -> void:
 func _cone(x: float, base_y: float, half: float, tall: float) -> void:
 	var roof := PackedVector2Array([
 		Vector2(x - half, base_y - MERLON), Vector2(x, base_y - MERLON - tall), Vector2(x + half, base_y - MERLON)])
-	draw_colored_polygon(roof, _tint(ROOF))
+	draw_colored_polygon(roof, _tint(KEEP_ROOF))
 	roof.append(roof[0])
-	draw_polyline(roof, ROOF_EDGE, 1.6, true)
+	draw_polyline(roof, KEEP_ROOF_EDGE, 1.6, true)
 
 func _banner(x: float, top: float, pole: float, flag: Color) -> void:
 	draw_line(Vector2(x, top), Vector2(x, top - pole), POLE, 3.0)

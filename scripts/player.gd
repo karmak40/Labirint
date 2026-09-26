@@ -21,6 +21,7 @@ enum Weapon {
 	TORCH,        ## a poor weapon, but the only one that sets things alight
 	CROSSBOW,     ## shoots at once and then is useless until it is spanned again
 	CLUB,         ## a length of hard wood: swung like the axe, and all a new recruit gets
+	HAMMER,       ## the smith's: swung like the axe, but at an anvil
 }
 
 enum ActionKind {
@@ -126,6 +127,7 @@ const STRIKE_COST := {
 	Weapon.GREATSWORD: 27.0,
 	Weapon.CROSSBOW: 5.0,      ## pulling a trigger is nothing
 	Weapon.CLUB: 14.0,
+	Weapon.HAMMER: 10.0,
 }
 const SPAN_COST := 24.0        ## spanning it is most of the work of using one
 const CHOP_COST := 16.0        ## felling is heavier work than fighting
@@ -158,6 +160,7 @@ const STRIKE_HARM = {
 	Weapon.GREATSWORD: 34.0,
 	Weapon.CROSSBOW: 30.0,     ## harder than a bow, and it needs to be
 	Weapon.CLUB: 16.0,         ## a bruise rather than a cut
+	Weapon.HAMMER: 14.0,
 }
 
 ## Fired once as a body goes down, however it went. Nothing in the body listens;
@@ -196,6 +199,10 @@ var rest_time := 0.0    ## how long since the last effort
 var skills := {}        ## Weapon -> level; anything missing is a raw beginner
 var crossbow_loaded := true
 var helm := Helm.NONE
+## A shield strapped on over a one-handed weapon (given out by the RTS forge).
+## The sword-and-shield has its own shield and never needs this.
+var shielded := false
+const SHIELD_WEAPONS := [Weapon.SWORD, Weapon.CLUB, Weapon.AXE, Weapon.DAGGER, Weapon.TORCH]
 var donning := false    ## which way round the current helm action goes
 var rise_time := -1.0   ## negative means not getting up
 var roll_time := -1.0   ## negative means not rolling
@@ -648,7 +655,11 @@ func reset_targets() -> void:
 func land_strike() -> void:
 	var mark := _nearest_target(STRIKE_RANGE, false)
 	if mark != null:
-		mark.take_hit(global_position, strike_harm())
+		mark.take_hit(global_position, harm_against(mark))
+
+## What a blow does to this particular mark; the same to everything, here.
+func harm_against(_mark: Node) -> float:
+	return strike_harm()
 
 func is_chopping() -> bool:
 	return is_attacking() and attack_kind == ActionKind.CHOP_TREE

@@ -23,6 +23,7 @@ var walking := false
 var stalled := 0.0
 var sidestep_left := 0.0
 var sidestep_sign := 1.0
+var last_at := Vector2.INF     ## where the body stood last frame
 
 func _init(top_speed: float) -> void:
 	radius = 14.0
@@ -79,11 +80,20 @@ func _unstick(wish: Vector2, out: Vector2) -> Vector2:
 		sidestep_left -= delta
 		return wish.rotated(SIDESTEP_ANGLE * sidestep_sign)
 	var body := get_parent() as CharacterBody2D
-	if body != null and wish.length() > 0.3 and body.velocity.length() < STALL_SPEED:
+	if body == null:
+		return out
+	# how far it really got since last frame: pressed against a trunk with the
+	# crowd shoving the other way, a body can report a speed and go nowhere
+	var here := body.global_position
+	var moved := here.distance_to(last_at) / maxf(delta, 0.001) if last_at != Vector2.INF else INF
+	last_at = here
+	if wish.length() > 0.3 and moved < STALL_SPEED:
 		stalled += delta
 		if stalled > STALL_TIME:
 			stalled = 0.0
 			sidestep_left = SIDESTEP_TIME
+			# and the other way next time, in case this side is the wall
+			sidestep_sign = -sidestep_sign
 	else:
 		stalled = 0.0
 	return out

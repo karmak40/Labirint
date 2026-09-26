@@ -22,6 +22,7 @@ func step() -> bool:
 			if not playing():
 				return false
 			silence(Team.Id.ENEMY)
+			raise_barracks(Team.Id.PLAYER)
 			me.economy.add("wood", 400)
 			me.economy.add("ore", 400)
 			me.economy.add("gold", 200)

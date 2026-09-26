@@ -239,6 +239,9 @@ const CLUB_LENGTH := 27.0
 const CLUB_BUTT := 4.0
 const CLUB_HEAD := 4.2             # half-width of the heavy end
 const CLUB_KNOT := Color(0.30, 0.21, 0.13)
+const HAMMER_HAFT := 20.0
+const HAMMER_BUTT := 3.0
+const HAMMER_HEAD := Vector2(5.0, 6.5)   # along the haft, and half across it
 const AXE_BUTT := 6.0              # handle protruding behind the grip
 const AXE_HEAD := [                # around the handle tip: x along the handle, y to the blade side
 	Vector2(-4.0, 2.0),
@@ -980,7 +983,7 @@ func _process(delta: float) -> void:
 		elif player.is_striking() and _has_crossbow() \
 			and prev_progress < XBOW_SHOT and progress >= XBOW_SHOT:
 			if player.crossbow_loaded:
-				_release_arrow(QUARREL_SPEED, PlayerBody.STRIKE_HARM[PlayerBody.Weapon.CROSSBOW])
+				_release_arrow(QUARREL_SPEED, player.strike_harm())
 				player.shoot_crossbow()
 		elif player.is_spanning() \
 			and prev_progress < SPAN_HAUL_END and progress >= SPAN_HAUL_END:
@@ -1214,6 +1217,11 @@ func _update_pose(delta: float) -> void:
 			near_hand = near_hand.lerp(shoulder + swing * reach, attack_amount)
 			far_hand = far_hand.lerp(shoulder + swing * reach * SWING_GRIP_GAP, attack_amount)
 		_update_axe_pose()
+
+	# a shield strapped on over another weapon rides on the off arm, whatever
+	# the weapon hand is doing (the sword's own pose already puts it there)
+	if _has_shield() and not _has_sword() and not player.is_carrying() and not player.is_chopping() 			and not player.is_picking_up() and not player.is_putting_down() and not player.is_throwing():
+		far_hand = shoulder + Vector2(SHIELD_FORWARD, SHIELD_DROP)
 
 	# the head trails the shoulders by a few hundredths of a second, so the bob
 	# ripples up the body instead of moving as one rigid piece
@@ -1573,7 +1581,7 @@ func _has_sword() -> bool:
 		or player.weapon == PlayerBody.Weapon.SWORD_SHIELD
 
 func _has_shield() -> bool:
-	return player.weapon == PlayerBody.Weapon.SWORD_SHIELD
+	return player.weapon == PlayerBody.Weapon.SWORD_SHIELD 		or (player.shielded and PlayerBody.SHIELD_WEAPONS.has(player.weapon))
 
 func _has_greatsword() -> bool:
 	return player.weapon == PlayerBody.Weapon.GREATSWORD
@@ -2259,7 +2267,7 @@ func _release_arrow(speed: float = ARROW_SPEED, harm: float = -1.0) -> void:
 		_aim_arrow(arrow, player.aim_point, speed)
 	arrow.angle = dir.angle()
 	# what it will do is settled as it leaves, by whatever loosed it
-	arrow.harm = harm if harm >= 0.0 else PlayerBody.STRIKE_HARM[player.weapon]
+	arrow.harm = harm if harm >= 0.0 else player.strike_harm()
 
 	arrows.append(arrow)
 	if arrows.size() > ARROW_MAX:
@@ -2289,10 +2297,14 @@ class Bolt:
 	var z := 0.0
 	var life := 0.0
 	var spent := false
+	var harm := 0.0
 
 ## Sent from the stone itself, not from the hand, and dead level: a bolt that
 ## followed the staff's angle would climb away over everything it was aimed at.
 func _release_bolt() -> void:
+	# a healer's cast is a heal, not a bolt (Unit.release_mend)
+	if player.has_method("release_mend") and player.release_mend():
+		return
 	var side := signf(facing)
 	var grip := Vector2(weapon_grip.x * side, weapon_grip.y)
 	var dir := Vector2(weapon_dir.x * side, weapon_dir.y)
@@ -2302,6 +2314,10 @@ func _release_bolt() -> void:
 	bolt.pos = to_global(Vector2(head.x, 0.0))
 	bolt.z = maxf(0.0, -head.y)
 	bolt.vel = Vector2(side * BOLT_SPEED, 0.0)
+	# told where to cast, it goes there across the field instead, still level
+	if player.aim_point != Vector2.INF and player.aim_point.distance_to(bolt.pos) > 1.0:
+		bolt.vel = (player.aim_point - bolt.pos).normalized() * BOLT_SPEED
+	bolt.harm = player.strike_harm()
 
 	bolts.append(bolt)
 	if bolts.size() > BOLT_MAX:
@@ -2314,7 +2330,7 @@ func _simulate_bolts(delta: float) -> void:
 			continue
 		bolt.life += delta
 		bolt.pos += bolt.vel * delta
-		if player.hit_target_at(bolt.pos, BOLT_REACH, PlayerBody.STRIKE_HARM[PlayerBody.Weapon.STAFF]):
+		if player.hit_target_at(bolt.pos, BOLT_REACH, bolt.harm):
 			bolt.spent = true
 			_burst(bolt)
 		elif bolt.life > BOLT_LIFE:
@@ -2745,6 +2761,8 @@ func _stroke_weapon(grip: Vector2, dir: Vector2, kind: PlayerBody.Weapon) -> voi
 			_stroke_crossbow(grip, dir)
 		PlayerBody.Weapon.CLUB:
 			_stroke_club(grip, dir)
+		PlayerBody.Weapon.HAMMER:
+			_stroke_hammer(grip, dir)
 		_:
 			_stroke_axe(grip, dir)
 
@@ -2895,6 +2913,18 @@ func _stroke_club(grip: Vector2, dir: Vector2) -> void:
 	# knots in the head, so it reads as wood rather than a paddle
 	_w_circle(tip - dir * 6.0 + perp * 2.0, 1.3, CLUB_KNOT)
 	_w_circle(tip - dir * 1.0 - perp * 2.4, 1.2, CLUB_KNOT)
+
+## A short haft and a squared iron head across its end.
+func _stroke_hammer(grip: Vector2, dir: Vector2) -> void:
+	var perp := Vector2(-dir.y, dir.x)
+	var tip := grip + dir * HAMMER_HAFT
+	_w_line(grip - dir * HAMMER_BUTT, tip, WOOD_COLOR, 3.0, smooth_lines)
+	var head := PackedVector2Array([
+		tip - dir * HAMMER_HEAD.x * 0.5 + perp * HAMMER_HEAD.y, tip + dir * HAMMER_HEAD.x * 0.5 + perp * HAMMER_HEAD.y,
+		tip + dir * HAMMER_HEAD.x * 0.5 - perp * HAMMER_HEAD.y, tip - dir * HAMMER_HEAD.x * 0.5 - perp * HAMMER_HEAD.y])
+	_w_polygon(head, STEEL_COLOR)
+	head.append(head[0])
+	_w_polyline(head, STEEL_EDGE_COLOR, 1.2, smooth_lines)
 
 func _stroke_axe(grip: Vector2, dir: Vector2) -> void:
 	var perp := Vector2(-dir.y, dir.x)

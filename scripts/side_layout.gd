@@ -6,6 +6,9 @@ extends Resource
 @export var team: int = Team.Id.PLAYER
 @export var base := Vector2.ZERO
 @export var barracks := Vector2.ZERO
+## Whether the barracks already stands at the start; otherwise it has to be built
+## (at `barracks` is only where the ground is cleared for it).
+@export var has_barracks := true
 @export var stockpile := Vector2.ZERO
 @export var towers: Array[Vector2] = []
 ## Where hired soldiers go and stand until told otherwise.

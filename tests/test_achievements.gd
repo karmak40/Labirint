@@ -23,6 +23,7 @@ func step() -> bool:
 			check(ach.done.is_empty(), "and start empty")
 			ach.unlocked.connect(func(id: String) -> void: got.append(id))
 			silence(Team.Id.ENEMY)
+			raise_barracks(Team.Id.PLAYER)
 			var guard: Unit = load("res://scenes/warrior/Warrior.tscn").instantiate()
 			guard.team = Team.Id.ENEMY
 			guard.position = gs.side(Team.Id.ENEMY).base().approach_from(gs.human().base().global_position)

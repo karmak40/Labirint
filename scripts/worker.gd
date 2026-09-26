@@ -18,7 +18,24 @@ const WORK_SPEED := 0.8
 const GIVE_UP := 9.0           ## seconds after which an errand that is going nowhere is dropped
 
 ## "wood", "ore" or "gold": what it goes for, and what it bothers to carry.
+## Or "smith": it stands at an anvil of its side's forge and beats out arms
+## and kit. Or "recruit": a man hired for a soldier on order (`draft`), who
+## fetches his arms from the forge and takes them to the barracks to train.
 @export var job := "wood"
+## What it did before it was put to the anvil, to go back to afterwards.
+var former_job := ""
+## For a smith: whose anvil, and which of its two.
+var smithy: Forge = null
+var anvil := 0
+## For a recruit: the order he is filling.
+var draft: Draft = null
+
+const RECRUIT_PACE := 1.0      ## a recruit walks, he does not trudge like a man carrying logs
+const COLLECT_REACH := 14.0    ## how near where he waits for his arms
+const DOOR_REACH := 20.0       ## and the barracks door
+
+const ANVIL_REACH := 8.0       ## how near the smith's spot it has to stand
+const WORKER_LAYER := 2        ## a physics layer of their own (see _ready)
 
 enum Task { IDLE, TO_SOURCE, GATHERING, FETCHING, DELIVERING }
 
@@ -34,10 +51,45 @@ var path: Pathfinder
 func _ready() -> void:
 	super()
 	add_to_group("workers")
-	weapon = Weapon.AXE if job == "wood" else Weapon.PICKAXE
+	# Labourers bump into the world -- trunks, walls, veins -- but not into
+	# bodies: in a crowded wood five of them shoving each other between the
+	# trunks wedge fast, logs and all. The crowd's steering still keeps them apart.
+	collision_layer = WORKER_LAYER
+	collision_mask = 1
+	_take_tools()
 	path = Pathfinder.new(speed)
 	add_child(path)
 	set_process_unhandled_key_input(false)   # a head, not a keyboard, drives it
+
+func _take_tools() -> void:
+	match job:
+		"wood":
+			weapon = Weapon.AXE
+		"smith":
+			weapon = Weapon.HAMMER
+		"recruit":
+			weapon = draft.carried_weapon() if draft != null and draft.stage == Draft.Stage.CARRYING else Weapon.NONE
+		_:
+			weapon = Weapon.PICKAXE
+
+## A new trade: whatever it was doing is dropped, and it takes up the tools.
+func set_job(next: String) -> void:
+	if next == job:
+		return
+	if next == "smith" and job != "recruit":
+		former_job = job
+	if next != "smith":
+		smithy = null
+	job = next
+	source = null
+	fetching = null
+	home = null
+	shunned.clear()
+	_take_tools()
+	_set_task(Task.IDLE)
+
+func is_smith() -> bool:
+	return job == "smith"
 
 func _get_input_vector() -> Vector2:
 	return wish
@@ -71,10 +123,18 @@ func _decide(delta: float) -> void:
 		return
 
 	if carried_item != null:
-		if Stockpile.kind_of(carried_item) == "":
+		if Stockpile.kind_of(carried_item) == "" or is_smith():
 			put_down_rock()   # picked up the wrong thing: not ours to carry
 			return
 		_deliver()
+		return
+
+	if is_smith():
+		_smith()
+		return
+
+	if job == "recruit":
+		_enlist()
 		return
 
 	var loose := _loose_piece(LOOSE_SEARCH)
@@ -83,6 +143,78 @@ func _decide(delta: float) -> void:
 		return
 
 	_gather()
+
+## To its anvil, and hammer while there is work on it. With the forge gone it
+## goes back to what it did before.
+func _smith() -> void:
+	fetching = null
+	var forge := my_forge()
+	if forge == null:
+		if smithy != null and (not is_instance_valid(smithy) or not smithy.is_alive()):
+			set_job(former_job if former_job != "" else "wood")
+			return
+		_set_task(Task.IDLE)
+		_stand_clear()
+		return
+	if not _walk_to(forge.smith_spot(anvil), ANVIL_REACH, WORK_SPEED):
+		_set_task(Task.TO_SOURCE)
+		return
+	var dx := forge.anvil_point(anvil).x - global_position.x
+	if absf(dx) > 1.0:
+		facing_x = signf(dx)
+	if not forge.has_work(anvil):
+		_set_task(Task.IDLE)
+		return
+	_set_task(Task.GATHERING)
+	# may refuse for want of breath; it simply tries again next frame
+	attack()
+
+## The forge it smiths at, while it stands finished.
+func my_forge() -> Forge:
+	if smithy != null and is_instance_valid(smithy) and smithy.is_alive() and smithy.is_complete():
+		return smithy
+	return null
+
+## Whether it is at its anvil, facing it.
+func at_anvil() -> bool:
+	var forge := my_forge()
+	return is_smith() and forge != null and global_position.distance_to(forge.smith_spot(anvil)) <= ANVIL_REACH * 1.5
+
+## At the anvil the hammer comes down on the work, not on whoever is near.
+func land_strike() -> void:
+	if at_anvil():
+		my_forge().hammer_blow(anvil)
+		return
+	super()
+
+## A recruit's errand: to the forge for his arms, then to the barracks with
+## them. Where there is nowhere to go yet he waits out of the way.
+func _enlist() -> void:
+	fetching = null
+	if draft == null or draft.side == null:
+		_set_task(Task.IDLE)
+		_stand_clear()
+		return
+	var side := draft.side
+	if draft.stage == Draft.Stage.ARMING:
+		var spot := side.collect_point(self)
+		if spot == Vector2.INF:
+			_set_task(Task.IDLE)
+			return
+		_set_task(Task.TO_SOURCE)
+		if _walk_to(spot, COLLECT_REACH, RECRUIT_PACE):
+			_set_task(Task.IDLE)
+			if side.hand_out_arms(draft):
+				_take_tools()
+		return
+	var barracks := side.barracks()
+	if barracks == null or not barracks.is_complete():
+		_set_task(Task.IDLE)
+		_stand_clear()
+		return
+	_set_task(Task.DELIVERING)
+	if _walk_to(barracks.door_point(), DOOR_REACH, RECRUIT_PACE):
+		side.send_to_train(draft, barracks)
 
 func _set_task(next: Task) -> void:
 	if task != next:

@@ -24,6 +24,10 @@ const BUILDINGS := {
 		"cost": {"wood": 40, "ore": 30}, "time": 20.0},
 	"library": {"title": "Библиотека", "about": "Здесь изучают технологии: новых воинов и улучшения. Одна на сторону.",
 		"cost": {"wood": 60, "ore": 20}, "time": 25.0, "limit": 1},
+	"barracks": {"title": "Казарма", "about": "Здесь нанимают солдат. Без неё армии не будет. Одна на сторону.",
+		"cost": {"wood": 40, "ore": 10}, "time": 20.0, "limit": 1},
+	"forge": {"title": "Кузница", "about": "Куёт оружие для новобранцев, а ещё шлемы, латы и щиты. Две наковальни — два кузнеца. Не больше двух на сторону.",
+		"cost": {"wood": 50, "ore": 40}, "time": 25.0, "limit": 2},
 }
 const BUILD_RANGE := 700.0     ## how far from its own buildings a side may build
 const CLEARANCE := 18.0        ## room left between one building and the next
@@ -143,11 +147,23 @@ func enemy_of(team: int) -> PlayerState:
 
 # --- commands -----------------------------------------------------------------
 
+## Hire a labourer at the castle, or order a soldier: a man is hired for him,
+## fetches his arms from the forge and trains in the barracks
+## (PlayerState.order_soldier).
 func hire(team: int, kind: String) -> bool:
 	var state := side(team)
-	if not is_playing() or state == null or state.barracks() == null:
+	if not is_playing() or state == null:
 		return false
-	return state.barracks().queue_unit(kind)
+	if ProductionBuilding.SOLDIERS.has(kind):
+		return state.order_soldier(kind)
+	if state.producer_for(kind) == null:
+		return false
+	return state.producer_for(kind).queue_unit(kind)
+
+## Move one labourer onto a trade: "wood", "ore" or "gold".
+func assign_worker(team: int, job: String) -> bool:
+	var state := side(team)
+	return is_playing() and state != null and state.move_worker(job)
 
 # --- building ---------------------------------------------------------------
 
@@ -157,6 +173,10 @@ static func _make(kind: String) -> Building:
 			return Tower.new()
 		"library":
 			return Library.new()
+		"forge":
+			return Forge.new()
+		"barracks":
+			return ProductionBuilding.new()
 	return null
 
 static var _footprints := {}
@@ -178,6 +198,10 @@ func build_problem(team: int, kind: String, point: Vector2) -> String:
 	var entry: Dictionary = BUILDINGS[kind]
 	if entry.has("limit") and kind == "library" and state.has_library_site():
 		return "Библиотека уже есть"
+	if entry.has("limit") and kind == "forge" and state.forge_sites() >= int(entry["limit"]):
+		return "Уже две кузницы"
+	if entry.has("limit") and kind == "barracks" and state.has_barracks_site():
+		return "Казарма уже есть"
 	var ground := field()
 	var half := footprint_of(kind) * 0.5
 	if ground == null or point.x < half.x + 20.0 or point.x > ground.map.floor_size.x - half.x - 20.0 \
@@ -257,6 +281,21 @@ func research(team: int, id: String) -> bool:
 	var state := side(team)
 	return is_playing() and state != null and state.start_research(id)
 
+## Order a piece at the forge (Forge.GEAR): kit, or a weapon into the store
+## for recruits to come.
+func forge(team: int, item: String) -> bool:
+	var state := side(team)
+	return is_playing() and state != null and state.order_gear(item)
+
+## Put a labourer to a free anvil, or send a smith back to its trade.
+func assign_smith(team: int) -> bool:
+	var state := side(team)
+	return is_playing() and state != null and state.assign_smith()
+
+func release_smith(team: int) -> bool:
+	var state := side(team)
+	return is_playing() and state != null and state.release_smith()
+
 ## Send the army at a point, fighting whatever it meets on the way.
 func attack_move(team: int, point: Vector2) -> void:
 	var state := side(team)
@@ -275,11 +314,13 @@ func attack_enemy_base(team: int) -> void:
 ## Call the army back to its own rally point.
 func rally_home(team: int) -> void:
 	var state := side(team)
-	if is_playing() and state != null and state.barracks() != null:
-		state.squad.rally(state.barracks().rally_point)
+	if is_playing() and state != null and state.rally_point != Vector2.INF:
+		state.squad.rally(state.rally_point)
 
 ## Where new recruits go and stand.
 func set_rally_point(team: int, point: Vector2) -> void:
 	var state := side(team)
-	if is_playing() and state != null and state.barracks() != null:
-		state.barracks().set_rally_point(point)
+	if is_playing() and state != null:
+		state.rally_point = point
+		if state.barracks() != null:
+			state.barracks().set_rally_point(point)

@@ -3,7 +3,7 @@ extends CanvasLayer
 ##
 ##   top left    what is in the store, how big the army is, how many hands
 ##   top right   the whole field in miniature (Minimap)
-##   bottom      three tabs of cards -- hire, build, learn -- what is under way,
+##   bottom      tabs of cards -- hire, build, learn -- what is under way,
 ##               and the two orders for the army
 ##
 ## It reads the side through GameState and does everything through GameState's
@@ -11,17 +11,31 @@ extends CanvasLayer
 ## Placing a building is handed to the input adapter, which owns the mouse on
 ## the field.
 
-const WORKERS := ["woodcutter", "miner", "gold_miner"]
-const TROOPS := ["warrior", "spearman", "archer", "crossbowman", "knight"]
-const BUILD := ["tower", "library"]
-const LEARN := ["spears", "archery", "crossbows", "chivalry", "forging", "mail"]
-const TABS := [["Рабочие", "worker"], ["Войска", "army"], ["Постройки", "build"], ["Знания", "book"]]
+## The tabs of cards: what each holds, and whether its cards hire, build or learn.
+## No more than six to a tab, which is what fits beside the status column.
+const TABS := [
+	{"title": "Рабочие", "does": "hire", "cards": ["worker", "wood", "ore", "gold"]},
+	{"title": "Пехота", "does": "hire", "cards": ["warrior", "spearman", "axeman", "swordsman", "greatsword", "knight"]},
+	{"title": "Особые", "does": "hire", "cards": ["archer", "crossbowman", "mage", "scout", "torchbearer"]},
+	{"title": "Постройки", "does": "build", "cards": ["barracks", "tower", "library", "forge"]},
+	{"title": "Кузница", "does": "forge", "cards": ["smith", "helm", "armour", "shield", "arms"]},
+	{"title": "Оружие", "does": "learn", "cards": ["spears", "axes", "blades", "greatswords", "chivalry", "daggers"]},
+	{"title": "Науки", "does": "learn", "cards": ["archery", "crossbows", "fire", "forging", "mail"]},
+	{"title": "Магия", "does": "learn", "cards": ["magic", "healing"]},
+]
 const NAMES := {
+	"worker": "Рабочий", "wood": "Лес", "ore": "Руда", "gold": "Золото",
 	"woodcutter": "Лесоруб", "miner": "Рудокоп", "gold_miner": "Старатель",
 	"warrior": "Воин", "spearman": "Копейщик", "archer": "Лучник",
 	"crossbowman": "Арбалетчик", "knight": "Рыцарь",
+	"axeman": "Секироносец", "swordsman": "Мечник", "greatsword": "Двуручник",
+	"scout": "Лазутчик", "torchbearer": "Поджигатель", "mage": "Маг",
 }
 const ABOUT := {
+	"worker": "Нанимается в замке. Идёт туда, где рук меньше: на лес или на руду. Стоит 10 дерева или 10 руды — чего на складе больше.",
+	"wood": "Переводит одного рабочего на лес: рубит деревья и носит брёвна на склад.",
+	"ore": "Переводит одного рабочего на руду: добывает её в жилах и носит на склад.",
+	"gold": "Переводит одного рабочего на золото: оно нужно для знаний.",
 	"woodcutter": "Рубит деревья и носит брёвна на склад.",
 	"miner": "Добывает руду в жилах и носит на склад.",
 	"gold_miner": "Добывает золото: оно нужно для знаний.",
@@ -30,7 +44,17 @@ const ABOUT := {
 	"archer": "Стреляет издалека и отходит от тех, кто подбирается близко. Хрупкий.",
 	"crossbowman": "Бьёт дальше и сильнее лучника, но между выстрелами взводит арбалет.",
 	"knight": "Латы, меч и щит: крепче и сильнее всех.",
+	"axeman": "Секира рубит сильнее меча и ломает стены в полтора раза быстрее. Без доспеха.",
+	"swordsman": "Меч и шлем: крепкий, ровный боец, быстрее бьёт, чем секироносец.",
+	"greatsword": "Двуручный меч и латы: самый тяжёлый удар, но медленный и быстро выдыхается.",
+	"scout": "Быстрый и дешёвый, с кинжалом. Первым делом режет вражеских рабочих.",
+	"torchbearer": "Слаб в бою, но факел жжёт постройки вчетверо быстрее.",
+	"mage": "Посох бьёт молнией издалека, сильнее арбалета. Очень хрупкий. С «Исцелением» лечит своих.",
 }
+const SMITH_ABOUT := "Ставит рабочего к свободной наковальне: без кузнеца ничего не куётся. У кузницы две наковальни. Берёт того, кого больше всего (лесоруба или рудокопа), ближайшего к кузнице. Когда все наковальни заняты, нажатие возвращает одного кузнеца к прежней работе."
+const ARMS_ABOUT := "Склад кузницы: выкованное оружие и снаряжение. Новобранцы забирают своё оружие здесь."
+## How far along an order for a soldier is, for its card.
+const DRAFT_STAGE := {Draft.Stage.HIRING: "найм", Draft.Stage.CARRYING: "несёт"}
 const REFRESH := 0.1
 const MESSAGE_TIME := 2.6
 const TOAST_TIME := 3.5
@@ -74,17 +98,23 @@ class StatusView:
 			return
 		var font := get_theme_default_font()
 		var y := 12.0
-		# the barracks' queue: the one being trained with its bar, then the rest
-		var barracks := side.barracks()
-		draw_string(font, Vector2(0.0, y), "Казарма", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UiStyle.DIM)
-		if barracks == null:
-			draw_string(font, Vector2(56.0, y), "разрушена", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UiStyle.BAD)
-		elif barracks.queue.is_empty():
-			draw_string(font, Vector2(56.0, y), "свободна", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UiStyle.DIM)
-		else:
-			for i in barracks.queue.size():
-				Icons.draw(self, barracks.queue[i], Rect2(Vector2(56.0 + i * 22.0, y - 11.0), Vector2(18.0, 18.0)))
-			UiStyle.bar(self, Rect2(Vector2(56.0, y + 8.0), Vector2(18.0, 3.0)), barracks.current_share())
+		# who is being hired: the castle's labourers, then the barracks' soldiers,
+		# each first one with its bar
+		draw_string(font, Vector2(0.0, y), "Найм", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UiStyle.DIM)
+		var qx := 56.0
+		for where in [side.base(), side.barracks()]:
+			if where == null or where.queue.is_empty():
+				continue
+			for i in where.queue.size():
+				if qx > 150.0:
+					break
+				Icons.draw(self, where.queue[i], Rect2(Vector2(qx, y - 11.0), Vector2(18.0, 18.0)))
+				if i == 0:
+					UiStyle.bar(self, Rect2(Vector2(qx, y + 8.0), Vector2(18.0, 3.0)), where.current_share())
+				qx += 22.0
+		if qx == 56.0:
+			var idle := "нет казармы" if side.barracks() == null else "никого"
+			draw_string(font, Vector2(56.0, y), idle, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UiStyle.DIM)
 		y += 26.0
 		# the study, if there is a library to do it in
 		draw_string(font, Vector2(0.0, y), "Знания", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UiStyle.DIM)
@@ -103,7 +133,7 @@ class StatusView:
 		var any := false
 		for building in side.buildings:
 			if is_instance_valid(building) and building.is_alive() and not building.is_complete():
-				Icons.draw(self, "tower" if building is Tower else "library", Rect2(Vector2(x, y - 11.0), Vector2(18.0, 18.0)))
+				Icons.draw(self, Icons.site_of(building), Rect2(Vector2(x, y - 11.0), Vector2(18.0, 18.0)))
 				UiStyle.bar(self, Rect2(Vector2(x, y + 8.0), Vector2(18.0, 3.0)), building.built)
 				x += 22.0
 				any = true
@@ -174,7 +204,7 @@ func _watch_building(building: Building) -> void:
 		building.completed.connect(_on_completed)
 
 func _on_completed(building: Building) -> void:
-	say("Построено: %s" % ("Башня" if building is Tower else "Библиотека"), UiStyle.GOOD)
+	say("Построено: %s" % GameState.BUILDINGS[Icons.site_of(building)]["title"], UiStyle.GOOD)
 
 func _process(delta: float) -> void:
 	_run_toast(delta)
@@ -238,36 +268,79 @@ func _refresh() -> void:
 	chips["gold"].text = str(e.gold)
 	chips["army"].text = str(side.squad.alive().size())
 	chips["hands"].text = str(side.workers().size())
-	var barracks := side.barracks()
-	for card in cards[0] + cards[1]:
+	var count := side.hands()
+	for card in _cards_that("hire"):
 		var kind: String = card.get_meta("kind")
-		var entry: Dictionary = ProductionBuilding.CATALOG[kind]
 		card.store = e
 		card.locked = ""
 		card.badge = ""
 		card.progress = -1.0
-		if barracks != null and not barracks.is_unlocked(kind):
-			card.locked = PlayerState.RESEARCH[entry["requires"]]["title"]
-		if barracks != null:
-			var waiting := barracks.queue.count(kind)
-			if waiting > 0 and barracks.queue[0] == kind:
-				card.progress = barracks.current_share()
+		card.count = 0
+		if PlayerState.TRADES.has(kind):
+			# a trade: how many are on it; a click moves one more onto it
+			card.badge = "%d чел." % int(count[kind])
+			card.disabled = side.workers().size() - int(count[kind]) - int(count["smith"]) <= 0
+			card.refresh()
+			continue
+		if ProductionBuilding.SOLDIERS.has(kind):
+			_refresh_soldier(card, side, kind)
+			continue
+		var where := side.producer_for(kind)
+		if where == null:
+			card.locked = "замок"
+		if where != null:
+			card.cost = where.price_for(kind)
+			var waiting := where.queue.count(kind)
+			if waiting > 0 and where.queue[0] == kind:
+				card.progress = where.current_share()
 			card.count = waiting
-		card.disabled = barracks == null or not barracks.can_hire(kind)
+		card.disabled = where == null or not where.can_hire(kind)
 		card.refresh()
-	for card in cards[2]:
+	for card in _cards_that("build"):
 		var kind: String = card.get_meta("kind")
 		card.store = e
 		card.badge = ""
 		card.progress = -1.0
 		card.locked = ""
-		if kind == "library" and side.has_library_site():
+		if kind == "barracks" and side.has_barracks_site():
+			card.badge = "построена" if side.barracks().is_complete() else "строится"
+			card.disabled = true
+		elif kind == "library" and side.has_library_site():
 			card.badge = "построена" if side.library() != null else "строится"
+			card.disabled = true
+		elif kind == "forge" and side.has_forge_site():
+			card.badge = "построена" if side.forge() != null else "строится"
 			card.disabled = true
 		else:
 			card.disabled = not e.can_afford(GameState.BUILDINGS[kind]["cost"])
 		card.refresh()
-	for card in cards[3]:
+	var smithy := side.forge()
+	var hand := side.smith()
+	for card in _cards_that("forge"):
+		var item: String = card.get_meta("kind")
+		if item == "smith":
+			_refresh_smith(card, side, smithy, hand)
+			continue
+		if item == "arms":
+			_refresh_store(card, side)
+			continue
+		card.store = e
+		card.badge = ""
+		card.locked = ""
+		card.progress = -1.0
+		card.count = 0
+		if smithy == null:
+			card.locked = "кузница"
+		else:
+			card.count = side.pending(item)
+			if smithy.on_anvil.has(item):
+				card.progress = smithy.current_share(item)
+		var target := side.least_busy_forge()
+		card.disabled = target == null or not target.can_forge(item)
+		card.tooltip_text = card.get_meta("tip") + "\nВ запасе: %d. Без этого в строю: %d.%s" % [int(side.gear[item]), side.short_of(item),
+			"" if hand != null else "\nНет кузнеца: заказ ждёт, пока не назначите рабочего."]
+		card.refresh()
+	for card in _cards_that("learn"):
 		var id: String = card.get_meta("kind")
 		card.store = e
 		card.badge = ""
@@ -289,6 +362,13 @@ func _refresh() -> void:
 		card.refresh()
 	status.queue_redraw()
 
+func _cards_that(does: String) -> Array:
+	var found := []
+	for i in TABS.size():
+		if TABS[i]["does"] == does:
+			found.append_array(cards[i])
+	return found
+
 ## Both sides at a glance, blue then red, for a match nobody is playing.
 func _refresh_watching() -> void:
 	var lines := []
@@ -307,14 +387,137 @@ func _refresh_watching() -> void:
 # --- commands -----------------------------------------------------------------
 
 func _hire(kind: String) -> void:
-	if not GameState.hire(GameState.human_team, kind):
-		say("Недостаточно ресурсов", UiStyle.BAD)
+	var side := GameState.human()
+	if ProductionBuilding.SOLDIERS.has(kind) and Input.is_key_pressed(KEY_SHIFT):
+		_stock(kind)
+	elif not GameState.hire(GameState.human_team, kind):
+		var why := side.order_problem(kind) if side != null and ProductionBuilding.SOLDIERS.has(kind) else ""
+		say(why if why != "" else "Недостаточно ресурсов", UiStyle.BAD)
+	elif ProductionBuilding.SOLDIERS.has(kind) and not side.missing_for(kind).is_empty() and side.smith() == null:
+		say("Оружие ждёт кузнеца: назначьте рабочего к наковальне", UiStyle.BAD)
 	_refresh()
+
+## Shift+click on a soldier's card: his arms are made into the store, for later.
+func _stock(kind: String) -> void:
+	var made := []
+	for item in ProductionBuilding.CATALOG[kind].get("arms", []):
+		if Forge.GEAR.has(item) and GameState.forge(GameState.human_team, item):
+			made.append(Forge.GEAR[item]["title"].to_lower())
+	if made.is_empty():
+		var side := GameState.human()
+		say("Нечего ковать" if ProductionBuilding.CATALOG[kind]["arms"] == ["club"]
+			else ("Нет кузницы" if side.forge() == null else "Нельзя выковать: нет рецепта, ресурсов или места в очереди"), UiStyle.BAD)
+	else:
+		say("Куётся в запас: %s" % ", ".join(made))
 
 func _place(kind: String) -> void:
 	if input != null:
 		input.begin_placing(kind)
 		say("%s: ЛКМ — поставить, Shift — ещё одну, ПКМ или Esc — отмена" % GameState.BUILDINGS[kind]["title"])
+
+func _assign(job: String) -> void:
+	if GameState.assign_worker(GameState.human_team, job):
+		say("Рабочий идёт %s" % {"wood": "на лес", "ore": "на руду", "gold": "на золото"}[job])
+	_refresh()
+
+func _forge(item: String) -> void:
+	if not GameState.forge(GameState.human_team, item):
+		say("Недостаточно ресурсов", UiStyle.BAD)
+	elif GameState.human().smith() == null:
+		say("Заказ ждёт кузнеца: назначьте рабочего", UiStyle.BAD)
+	_refresh()
+
+func _toggle_smith() -> void:
+	var side := GameState.human()
+	if not side.free_anvil().is_empty():
+		if GameState.assign_smith(GameState.human_team):
+			say("Рабочий идёт к наковальне", UiStyle.GOOD)
+		elif side.smith() != null and GameState.release_smith(GameState.human_team):
+			say("Кузнец вернулся к прежней работе")
+		else:
+			say("Нет рабочих, чтобы поставить к наковальне", UiStyle.BAD)
+	elif GameState.release_smith(GameState.human_team):
+		say("Кузнец вернулся к прежней работе")
+	_refresh()
+
+func _refresh_smith(card: HudCard, side: PlayerState, smithy: Forge, hand: Worker) -> void:
+	card.store = side.economy
+	card.locked = ""
+	card.progress = -1.0
+	card.count = 0
+	if smithy == null:
+		card.locked = "кузница"
+		card.badge = ""
+		card.disabled = true
+	elif hand == null:
+		card.badge = "назначить"
+		card.disabled = side.workers().is_empty()
+	else:
+		var anvils := side.forges().size() * Forge.ANVILS.size()
+		var working := 0
+		for smith in side.smiths():
+			if smith.at_anvil() and smith.my_forge().has_work(smith.anvil):
+				working += 1
+		card.badge = "%d/%d · %s" % [side.smiths().size(), anvils, "куёт" if working > 0 else "ждёт"]
+		card.disabled = false
+	card.refresh()
+
+## The store: how many pieces are in it, and what, in the tooltip.
+func _refresh_store(card: HudCard, side: PlayerState) -> void:
+	card.store = side.economy
+	card.locked = ""
+	card.progress = -1.0
+	card.count = 0
+	var lines := []
+	var total := 0
+	for item in Forge.GEAR:
+		var have := int(side.gear[item])
+		total += have
+		if have > 0 or side.pending(item) > 0:
+			lines.append("%s: %d%s" % [Forge.GEAR[item]["title"], have,
+				(" (куётся %d)" % side.pending(item)) if side.pending(item) > 0 else ""])
+	card.badge = "%d шт." % total
+	card.disabled = true
+	card.tooltip_text = "Склад  [%s]\n%s\n%s" % [card.get_meta("key"), ARMS_ABOUT,
+		"\n".join(lines) if not lines.is_empty() else "Пусто."]
+	card.refresh()
+
+## A soldier's card: what ordering one costs now (the man and whatever of his
+## arms is not in store), what it is waiting for, and how far the orders are.
+func _refresh_soldier(card: HudCard, side: PlayerState, kind: String) -> void:
+	var entry: Dictionary = ProductionBuilding.CATALOG[kind]
+	var why := side.order_problem(kind)
+	if not side.kind_unlocked(kind):
+		card.locked = PlayerState.RESEARCH[entry["requires"]]["title"]
+	elif side.barracks() == null:
+		card.locked = "казарма"
+	elif not side.barracks().is_complete():
+		card.locked = "строится"
+	elif why == "Нет кузницы":
+		card.locked = "кузница"
+	card.cost = side.draft_price(kind)
+	# the furthest-on order of this kind says where things stand
+	var training := side.barracks().queue.count(kind) if side.barracks() != null else 0
+	card.count = side.drafts_of(kind) + training
+	if training > 0 and side.barracks().queue[0] == kind:
+		card.progress = side.barracks().current_share()
+		card.badge = "обучается"
+	else:
+		for draft in side.drafts:
+			if draft.kind != kind:
+				continue
+			if draft.stage == Draft.Stage.ARMING:
+				var lacking := ""
+				for item in draft.needs:
+					if int(side.gear[item]) < draft.needs.count(item):
+						lacking = Forge.GEAR[item]["title"].to_lower()
+						break
+				card.badge = ("ждёт: " + lacking) if lacking != "" else "за оружием"
+			else:
+				card.badge = DRAFT_STAGE[draft.stage]
+			break
+	card.disabled = why != ""
+	card.refresh()
 
 func _learn(id: String) -> void:
 	if GameState.research(GameState.human_team, id):
@@ -466,11 +669,11 @@ func _build_bottom_bar() -> void:
 	left.add_child(tabs)
 	for i in TABS.size():
 		var button := Button.new()
-		button.text = TABS[i][0]
+		button.text = TABS[i]["title"]
 		button.toggle_mode = true
 		button.focus_mode = Control.FOCUS_NONE
-		button.custom_minimum_size = Vector2(86.0, 24.0)
-		button.add_theme_font_size_override("font_size", 12)
+		button.custom_minimum_size = Vector2(68.0, 24.0)
+		button.add_theme_font_size_override("font_size", 11)
 		button.tooltip_text = "Tab — следующая вкладка"
 		button.pressed.connect(_select_tab.bind(i))
 		tabs.add_child(button)
@@ -478,31 +681,47 @@ func _build_bottom_bar() -> void:
 	cards_row = HBoxContainer.new()
 	cards_row.add_theme_constant_override("separation", 5)
 	left.add_child(cards_row)
-	for group in [[0, WORKERS], [1, TROOPS]]:
-		cards[group[0]] = []
-		for i in group[1].size():
-			var kind: String = group[1][i]
-			var card := _card(kind, NAMES[kind], ProductionBuilding.CATALOG[kind]["cost"], str(i + 1), ABOUT[kind])
-			card.pressed.connect(_hire.bind(kind))
-			cards[group[0]].append(card)
-	cards[2] = []
-	for i in BUILD.size():
-		var kind: String = BUILD[i]
-		var entry: Dictionary = GameState.BUILDINGS[kind]
-		var card := _card(kind, entry["title"], entry["cost"], str(i + 1), entry["about"])
-		card.pressed.connect(_place.bind(kind))
-		cards[2].append(card)
-	cards[3] = []
-	for i in LEARN.size():
-		var id: String = LEARN[i]
-		var entry: Dictionary = PlayerState.RESEARCH[id]
-		var after := ""
-		if entry.has("needs"):
-			after = "\nСначала: %s." % PlayerState.RESEARCH[entry["needs"]]["title"]
-		var card := _card(id, entry["title"], entry["cost"], str(i + 1),
-			"%s%s\nИзучается %d с в библиотеке." % [entry["about"], after, int(entry["time"])])
-		card.pressed.connect(_learn.bind(id))
-		cards[3].append(card)
+	for t in TABS.size():
+		cards[t] = []
+		var kinds: Array = TABS[t]["cards"]
+		for i in kinds.size():
+			var kind: String = kinds[i]
+			var key := str(i + 1)
+			var card: HudCard
+			match TABS[t]["does"]:
+				"hire" when PlayerState.TRADES.has(kind):
+					card = _card(kind, NAMES[kind], {}, key, ABOUT[kind])
+					card.pressed.connect(_assign.bind(kind))
+				"hire" when ProductionBuilding.SOLDIERS.has(kind):
+					card = _card(kind, NAMES[kind], _full_price(kind), key, "%s\n%s" % [ABOUT[kind], _arms_line(kind)])
+					card.pressed.connect(_hire.bind(kind))
+				"hire":
+					card = _card(kind, NAMES[kind], ProductionBuilding.CATALOG[kind]["cost"], key, ABOUT[kind])
+					card.pressed.connect(_hire.bind(kind))
+				"build":
+					var entry: Dictionary = GameState.BUILDINGS[kind]
+					card = _card(kind, entry["title"], entry["cost"], key, entry["about"])
+					card.pressed.connect(_place.bind(kind))
+				"forge" when kind == "smith":
+					card = _card(kind, "Кузнец", {}, key, SMITH_ABOUT)
+					card.pressed.connect(_toggle_smith)
+				"forge" when kind == "arms":
+					card = _card(kind, "Склад", {}, key, ARMS_ABOUT)
+				"forge":
+					var entry: Dictionary = Forge.GEAR[kind]
+					card = _card(kind, entry["title"], entry["cost"], key,
+						"%s\nКузнецу работы у наковальни: около %d с." % [entry["about"], int(entry["work"])])
+					card.set_meta("tip", card.tooltip_text)
+					card.pressed.connect(_forge.bind(kind))
+				"learn":
+					var entry: Dictionary = PlayerState.RESEARCH[kind]
+					var after := ""
+					if entry.has("needs"):
+						after = "\nСначала: %s." % PlayerState.RESEARCH[entry["needs"]]["title"]
+					card = _card(kind, entry["title"], entry["cost"], key,
+						"%s%s\nИзучается %d с в библиотеке." % [entry["about"], after, int(entry["time"])])
+					card.pressed.connect(_learn.bind(kind))
+			cards[t].append(card)
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -520,6 +739,25 @@ func _build_bottom_bar() -> void:
 		order.tooltip_text = spec[2]
 		order.pressed.connect(spec[3])
 		row.add_child(order)
+
+## A soldier with nothing in store: the man, and all his arms.
+static func _full_price(kind: String) -> Dictionary:
+	var price := {"wood": int(ProductionBuilding.CATALOG["recruit"]["pay_any"])}
+	for item in ProductionBuilding.CATALOG[kind].get("arms", []):
+		if Forge.GEAR.has(item):
+			for resource in Forge.GEAR[item]["cost"]:
+				price[resource] = int(price.get(resource, 0)) + int(Forge.GEAR[item]["cost"][resource])
+	return price
+
+## What a soldier's card says about his arms.
+static func _arms_line(kind: String) -> String:
+	var arms: Array = ProductionBuilding.CATALOG[kind].get("arms", [])
+	if arms == ["club"]:
+		return "Дубину выдают в замке. Нужна только казарма."
+	var names := []
+	for item in arms:
+		names.append(Forge.GEAR[item]["title"].to_lower())
+	return "Новобранец забирает в кузнице: %s, и обучается в казарме. Shift+клик — выковать оружие в запас.\nЦена ниже, если оружие уже есть на складе." % ", ".join(names)
 
 func _card(kind: String, title: String, cost: Dictionary, key: String, about: String) -> HudCard:
 	var card := HudCard.new()

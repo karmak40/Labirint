@@ -45,24 +45,25 @@ func step() -> bool:
 			if not playing() or frame < 10:
 				return false
 			silence(Team.Id.ENEMY)
+			raise_barracks(Team.Id.PLAYER)
 			hud = current_scene.get_node("Hud")
 			hud.input.refused.connect(func(reason: String, _t: Color) -> void: said.append(reason))
 			gs.human().economy.add("wood", 300)
 			gs.human().economy.add("ore", 300)
-			_key(KEY_TAB)
-			_key(KEY_TAB)
+			for i in 3:
+				_key(KEY_TAB)
 			stage = 1
 			frame = 0
 		1:
 			if frame == 2:
-				check(hud.tab == 2, "Tab twice moves to «Постройки»", hud.tab)
-				_key(KEY_2)
+				check(hud.tab == 3, "Tab three times moves to «Постройки»", hud.tab)
+				_key(KEY_3)
 			if frame == 4:
-				check(hud.input.placing == "library", "key 2 there starts placing a library", hud.input.placing)
+				check(hud.input.placing == "library", "key 3 there starts placing a library", hud.input.placing)
 				_key(KEY_ESCAPE)
 			if frame == 6:
 				check(hud.input.placing == "" and not paused, "Esc cancels the placing and does not pause")
-				_key(KEY_2)
+				_key(KEY_3)
 			if frame == 8:
 				# the castle is in the way here
 				_click(gs.human().base().global_position, MOUSE_BUTTON_LEFT)
@@ -73,19 +74,19 @@ func step() -> bool:
 			if frame == 12:
 				check(gs.human().has_library_site(), "a left click on open ground lays out the library")
 				check(hud.input.placing == "", "and ends the placing")
-				_key(KEY_1)
+				_key(KEY_2)
 			if frame == 14:
-				check(hud.input.placing == "tower", "key 1 starts placing a tower")
+				check(hud.input.placing == "tower", "key 2 starts placing a tower")
 				_click(Vector2(760, 330), MOUSE_BUTTON_LEFT, true)
 			if frame == 16:
 				check(hud.input.placing == "tower", "with Shift held it carries on placing")
 				_click(Vector2(760, 330), MOUSE_BUTTON_RIGHT)
 			if frame == 18:
 				check(hud.input.placing == "", "the right button cancels it")
-				for i in 4:
+				for i in hud.TABS.size():
 					_key(KEY_TAB)
 			if frame == 20:
-				check(hud.tab == 2, "Tab goes round all four tabs", hud.tab)
+				check(hud.tab == 3, "Tab goes round all the tabs", hud.tab)
 				gs.hire(1, "warrior")
 				stage = 2
 				frame = 0

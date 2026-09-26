@@ -144,11 +144,12 @@ func _set_up_side(layout: SideLayout) -> void:
 	keep.position = layout.base
 	add_child(keep)
 
-	var barracks := ProductionBuilding.new()
-	barracks.team = team
-	barracks.position = layout.barracks
-	add_child(barracks)
-	barracks.set_rally_point(layout.rally)
+	if layout.has_barracks:
+		var barracks := ProductionBuilding.new()
+		barracks.team = team
+		barracks.position = layout.barracks
+		add_child(barracks)
+		barracks.set_rally_point(layout.rally)
 
 	var pile := Stockpile.new()
 	pile.team = team
@@ -176,6 +177,7 @@ func _set_up_side(layout: SideLayout) -> void:
 	var state := PlayerState.new()
 	state.name = "Side%d" % team
 	state.team = team
+	state.rally_point = layout.rally
 	add_child(state)
 	for kind in layout.start_stock:
 		state.economy.add(kind, int(layout.start_stock[kind]))
