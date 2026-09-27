@@ -4,6 +4,10 @@ extends Resource
 ## Part of a MapData; nothing here does anything on its own.
 
 @export var team: int = Team.Id.PLAYER
+## False for a side with no home on the field: no castle, stockpile or workers,
+## only soldiers that come in from the map's spawn points (the attackers of a
+## holdout room, RoomRules). Towers listed below still stand.
+@export var has_base := true
 @export var base := Vector2.ZERO
 @export var barracks := Vector2.ZERO
 ## Whether the barracks already stands at the start; otherwise it has to be built

@@ -1218,3 +1218,36 @@ msgstr "In die Schlacht"
 
 msgid "Карта: нажмите, чтобы перейти"
 msgstr "Karte: klicken, um dorthin zu springen"
+
+msgid "В кольце"
+msgstr "Umzingelt"
+
+msgid "Наш замок стоит посреди долины, и враги идут на него с обеих сторон, волна за волной. Своей крепости у них здесь нет — только орда из-за леса. Стройте, куйте, нанимайте и держитесь, пока не отбита последняя волна. За каждую отбитую крупную волну — трофейные припасы."
+msgstr "Unsere Burg steht mitten im Tal, und die Feinde greifen sie von beiden Seiten an, Welle um Welle. Eine Festung haben sie hier nicht, nur eine Horde von jenseits des Waldes. Baut, schmiedet, werbt an und haltet durch, bis die letzte Welle zurückgeschlagen ist. Jede große abgewehrte Welle hinterlässt Vorräte."
+
+msgid "Отбить все волны и сохранить замок."
+msgstr "Wehrt alle Wellen ab und haltet die Burg."
+
+msgid "Лазутчики идут резать рабочих!"
+msgstr "Späher sind hinter den Arbeitern her!"
+
+msgid "Поджигатели! Берегите постройки."
+msgstr "Brandstifter! Schützt die Gebäude."
+
+msgid "Последняя волна: рыцари орды!"
+msgstr "Die letzte Welle: die Ritter der Horde!"
+
+msgid "Вы выстояли: все %d волн отбиты."
+msgstr "Ihr habt standgehalten: alle %d Wellen abgewehrt."
+
+msgid "Волна %d отбита"
+msgstr "Welle %d abgewehrt"
+
+msgid "Волна %d отбита! Трофеи: %s"
+msgstr "Welle %d abgewehrt! Beute: %s"
+
+msgid "★ победа   ★ крепость цела хотя бы на %d%%   ★ хотя бы на %d%%"
+msgstr "★ Sieg   ★ Festung zu mindestens %d%% heil   ★ zu mindestens %d%%"
+
+msgid "Противник: орда без крепости, сложность меняет размер волн"
+msgstr "Gegner: eine Horde ohne Festung; die Schwierigkeit ändert die Größe der Wellen"

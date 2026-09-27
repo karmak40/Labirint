@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="MapData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/map_data.gd" id="MapScript"]
+[ext_resource type="Script" path="res://scripts/side_layout.gd" id="SideScript"]
+
+[sub_resource type="Resource" id="PlayerSide"]
+script = ExtResource("SideScript")
+team = 1
+base = Vector2(1500, 280)
+barracks = Vector2(1860, 420)
+has_barracks = true
+stockpile = Vector2(1140, 420)
+towers = Array[Vector2]([Vector2(1300, 385), Vector2(1700, 385)])
+rally = Vector2(1500, 445)
+start_workers = PackedStringArray("wood", "wood", "ore", "ore")
+start_stock = {
+"wood": 150,
+"ore": 100
+}
+
+[sub_resource type="Resource" id="EnemySide"]
+script = ExtResource("SideScript")
+team = 2
+has_base = false
+
+[resource]
+script = ExtResource("MapScript")
+title = "В кольце"
+floor_size = Vector2(3000, 560)
+tree_positions = Array[Vector2]([Vector2(260, 548), Vector2(304, 512), Vector2(348, 478), Vector2(378, 548), Vector2(422, 512), Vector2(466, 478), Vector2(496, 548), Vector2(540, 512), Vector2(584, 478), Vector2(614, 548), Vector2(658, 512), Vector2(702, 478), Vector2(732, 548), Vector2(776, 512), Vector2(820, 478), Vector2(850, 548), Vector2(894, 512), Vector2(938, 478), Vector2(968, 548), Vector2(1012, 512), Vector2(1056, 478), Vector2(1086, 548), Vector2(1130, 512), Vector2(1850, 548), Vector2(1894, 512), Vector2(1938, 478), Vector2(1968, 548), Vector2(2012, 512), Vector2(2056, 478), Vector2(2086, 548), Vector2(2130, 512), Vector2(2174, 478), Vector2(2204, 548), Vector2(2248, 512), Vector2(2292, 478), Vector2(2322, 548), Vector2(2366, 512), Vector2(2410, 478), Vector2(2440, 548), Vector2(2484, 512), Vector2(2528, 478), Vector2(2558, 548), Vector2(2602, 512), Vector2(2646, 478), Vector2(2676, 548), Vector2(2720, 512)])
+vein_positions = Array[Vector2]([Vector2(1060, 140), Vector2(1940, 140), Vector2(760, 330), Vector2(2240, 330)])
+gold_positions = Array[Vector2]([Vector2(460, 170), Vector2(2540, 170)])
+ore_rocks = 100
+ore_rock_worth = 10
+gold_rocks = 10
+gold_rock_worth = 10
+tree_logs = 15
+log_worth = 5
+regrow_time = 90.0
+refill_time = 0.0
+spawn_points = Dictionary[String, Vector2]({
+"east": Vector2(2950, 300),
+"west": Vector2(50, 300)
+})
+player = SubResource("PlayerSide")
+enemy = SubResource("EnemySide")

@@ -147,6 +147,8 @@ func _forest_floor() -> void:
 ## barracks, and gravel round the seams.
 func _worn_ground() -> void:
 	for layout in map.sides():
+		if not layout.has_base:
+			continue
 		var gate := _gate_of(layout)
 		_patch(gate + Vector2(0.0, 18.0), Vector2(120.0, 36.0))
 		_patch(layout.barracks + Vector2(0.0, 12.0), Vector2(62.0, 24.0))
@@ -172,12 +174,24 @@ func _gate_of(layout: SideLayout) -> Vector2:
 	return Vector2(layout.base.x, layout.base.y + 66.0)
 
 ## The main road: from one castle's gate to the other's, wandering a little.
+## Where attackers come in from the map's edge (a holdout), it runs from each
+## spawn point to the castle gates, west to east.
 func _road_line() -> PackedVector2Array:
+	var ends: Array[Vector2] = []
+	for layout in map.sides():
+		if layout.has_base:
+			ends.append(_gate_of(layout) + Vector2(0.0, 10.0))
+	for spot: Vector2 in map.spawn_points.values():
+		ends.append(spot)
+	ends.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x)
 	var line := PackedVector2Array()
-	if map.player == null or map.enemy == null:
-		return line
-	var from := _gate_of(map.player) + Vector2(0.0, 10.0)
-	var to := _gate_of(map.enemy) + Vector2(0.0, 10.0)
+	for i in range(ends.size() - 1):
+		var leg := _road_between(ends[i], ends[i + 1])
+		line.append_array(leg if i == 0 else leg.slice(1))
+	return line
+
+func _road_between(from: Vector2, to: Vector2) -> PackedVector2Array:
+	var line := PackedVector2Array()
 	var steps := int(absf(to.x - from.x) / 40.0)
 	var mid := map.floor_size.y * 0.52
 	for i in steps + 1:

@@ -228,8 +228,11 @@ func _show_briefing(index: int) -> void:
 	var room: Dictionary = Campaign.ROOMS[index]
 	var panel := _overlay()
 	var column := _overlay_column(panel, "%s · %s" % [tr("Комната %d") % (index + 1), tr(room["title"])])
+	# a holdout can not be won faster: its second star is for a castle nearly whole
+	var stars_line: String = tr("★ победа   ★ быстрее %d мин   ★ крепость цела хотя бы на %d%%") % [int(room["fast"] / 60.0), int(room["castle"] * 100.0)] \
+		if room.has("fast") else tr("★ победа   ★ крепость цела хотя бы на %d%%   ★ хотя бы на %d%%") % [int(room["castle"] * 100.0), int(room.get("castle_high", 1.0) * 100.0)]
 	for line in [[tr(room["brief"]), UiStyle.TEXT, 15], [tr("Цель: %s") % tr(room["goal"]), UiStyle.GOLD_BRIGHT, 15],
-			[tr("★ победа   ★ быстрее %d мин   ★ крепость цела хотя бы на %d%%") % [int(room["fast"] / 60.0), int(room["castle"] * 100.0)], UiStyle.DIM, 13]]:
+			[stars_line, UiStyle.DIM, 13]]:
 		var label := Label.new()
 		label.text = line[0]
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -238,7 +241,8 @@ func _show_briefing(index: int) -> void:
 		label.add_theme_font_size_override("font_size", line[2])
 		column.add_child(label)
 	var enemy := Label.new()
-	enemy.text = tr("Противник играет: %s") % tr(AIProfile.title(room.get("ai", "balanced")))
+	enemy.text = tr("Противник играет: %s") % tr(AIProfile.title(room["ai"])) if room.has("ai") \
+		else tr("Противник: орда без крепости, сложность меняет размер волн")
 	enemy.add_theme_color_override("font_color", UiStyle.DIM)
 	enemy.add_theme_font_size_override("font_size", 13)
 	column.add_child(enemy)

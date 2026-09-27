@@ -30,6 +30,9 @@ extends Resource
 @export var camp_positions: Array[Vector2] = []
 @export var camp_bandits := PackedStringArray(["warrior", "warrior", "spearman", "archer"])
 @export var camp_bounty := {"wood": 40, "ore": 30, "gold": 20}
+## Named points at the edge of the field where attackers come in, e.g.
+## {"west": Vector2(50, 300)}; a room's waves (RoomRules) name them in "from".
+@export var spawn_points: Dictionary[String, Vector2] = {}
 @export var player: SideLayout
 @export var enemy: SideLayout
 

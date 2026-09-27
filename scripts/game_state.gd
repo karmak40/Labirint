@@ -98,8 +98,9 @@ func register_match(sides: Dictionary) -> void:
 		var keep := state.base()
 		if keep != null:
 			keep.base_destroyed.connect(_on_base_destroyed)
-		# every side nobody is playing gets a head of its own
-		if spectating or team != human_team:
+		# every side nobody is playing gets a head of its own -- if it has a home
+		# to think from; attackers from outside (a holdout) are sent by RoomRules
+		if (spectating or team != human_team) and keep != null:
 			var director := AIDirector.new()
 			director.name = "AIDirector"
 			director.strategy = "random" if spectating else ai_strategy
@@ -113,7 +114,15 @@ func _on_base_destroyed(team: int) -> void:
 	# whoever still has a keep standing has won; with two sides that is the other one
 	for other in states:
 		if other != team:
-			winner = other
+			end_match(other)
+			return
+
+## Ends the match with `team` the winner: a castle fell, or a room's rules
+## (RoomRules) say the match is decided.
+func end_match(team: int) -> void:
+	if phase != Phase.PLAYING:
+		return
+	winner = team
 	phase = Phase.WON if winner == human_team else Phase.LOST
 	get_tree().paused = true
 	match_ended.emit(winner)
@@ -331,10 +340,22 @@ func attack_move(team: int, point: Vector2) -> void:
 	if is_playing() and state != null:
 		state.squad.attack_move(point)
 
-## Send the army at the enemy keep.
+## Send the army at the enemy keep; where the enemy has none (a holdout), at
+## the enemy soldier nearest our own castle.
 func attack_enemy_base(team: int) -> void:
 	var foe := enemy_of(team)
 	var me := side(team)
+	if foe != null and foe.base() == null and me != null and me.base() != null:
+		var home := me.base().global_position
+		var nearest: PlayerBody = null
+		for node in get_tree().get_nodes_in_group("targets"):
+			var body := node as PlayerBody
+			if body != null and body.is_alive() and body.team == foe.team \
+					and (nearest == null or body.global_position.distance_to(home) < nearest.global_position.distance_to(home)):
+				nearest = body
+		if nearest != null:
+			attack_move(team, nearest.global_position)
+		return
 	if foe != null and foe.base() != null:
 		# to the face of their castle that looks towards ours, not into its middle
 		var from := me.base().global_position if me != null and me.base() != null else foe.base().global_position

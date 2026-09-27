@@ -154,6 +154,20 @@ func _add_vein(spot: Vector2, kind: String) -> void:
 
 func _set_up_side(layout: SideLayout) -> void:
 	var team := layout.team
+	if not layout.has_base:
+		# attackers from outside: nothing of theirs stands here but towers
+		for spot in layout.towers:
+			var post := Tower.new()
+			post.team = team
+			post.position = spot
+			add_child(post)
+		var raiders := PlayerState.new()
+		raiders.name = "Side%d" % team
+		raiders.team = team
+		raiders.rally_point = Vector2.INF
+		add_child(raiders)
+		states[team] = raiders
+		return
 	var keep := Base.new()
 	keep.team = team
 	keep.position = layout.base

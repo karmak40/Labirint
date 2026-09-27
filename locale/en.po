@@ -1218,3 +1218,36 @@ msgstr "To battle"
 
 msgid "Карта: нажмите, чтобы перейти"
 msgstr "Map: click to go there"
+
+msgid "В кольце"
+msgstr "Surrounded"
+
+msgid "Наш замок стоит посреди долины, и враги идут на него с обеих сторон, волна за волной. Своей крепости у них здесь нет — только орда из-за леса. Стройте, куйте, нанимайте и держитесь, пока не отбита последняя волна. За каждую отбитую крупную волну — трофейные припасы."
+msgstr "Our castle stands in the middle of the valley, and the enemy comes at it from both sides, wave after wave. They have no fortress here, only a horde from beyond the woods. Build, forge, hire and hold on until the last wave is beaten. Every big wave beaten leaves supplies behind."
+
+msgid "Отбить все волны и сохранить замок."
+msgstr "Beat back every wave and keep the castle."
+
+msgid "Лазутчики идут резать рабочих!"
+msgstr "Scouts are coming for the workers!"
+
+msgid "Поджигатели! Берегите постройки."
+msgstr "Torchbearers! Guard the buildings."
+
+msgid "Последняя волна: рыцари орды!"
+msgstr "The last wave: the horde's knights!"
+
+msgid "Вы выстояли: все %d волн отбиты."
+msgstr "You held: all %d waves beaten."
+
+msgid "Волна %d отбита"
+msgstr "Wave %d beaten"
+
+msgid "Волна %d отбита! Трофеи: %s"
+msgstr "Wave %d beaten! Spoils: %s"
+
+msgid "★ победа   ★ крепость цела хотя бы на %d%%   ★ хотя бы на %d%%"
+msgstr "★ victory   ★ fortress at least %d%% whole   ★ at least %d%%"
+
+msgid "Противник: орда без крепости, сложность меняет размер волн"
+msgstr "Enemy: a horde without a fortress; the difficulty changes the size of the waves"

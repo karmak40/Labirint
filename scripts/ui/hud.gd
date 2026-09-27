@@ -280,7 +280,9 @@ func _on_match_started() -> void:
 	rules = GameState.field().get_node_or_null("RoomRules") as RoomRules
 	if rules != null:
 		rules.gates_opened.connect(func() -> void: say(tr("Ворота вражеской крепости открыты — на штурм!"), UiStyle.GOLD_BRIGHT))
-		rules.wave_sent.connect(func(i: int, n: int) -> void: say(tr("Волна %d: %d врагов идут на крепость!") % [i + 1, n], UiStyle.BAD))
+		rules.wave_sent.connect(func(i: int, n: int, line: String) -> void:
+			say(tr("Волна %d: %d врагов идут на крепость!") % [i + 1, n] + ("\n" + tr(line) if line != "" else ""), UiStyle.BAD))
+		rules.wave_beaten.connect(_on_wave_beaten)
 	var side := GameState.human()
 	if side == null or GameState.spectating:
 		return
@@ -698,13 +700,15 @@ func _on_match_ended(winner: int) -> void:
 		overlay_note.text = tr("Крепость противника пала.")
 	elif winner == GameState.human_team:
 		overlay_title.text = tr("Победа")
-		overlay_note.text = tr("Вражеская крепость пала.")
+		overlay_note.text = "" if rules != null and rules.after_waves == "win" else tr("Вражеская крепость пала.")
 		if Campaign.current >= 0:
 			var earned: int = Campaign.last_earned
 			overlay_title.text = tr("Победа") + "  " + "★".repeat(earned) + "☆".repeat(3 - earned)
 			overlay_note.text = tr("«%s» пройдена за %d:%02d.") % [tr(Campaign.ROOMS[Campaign.current]["title"]),
 				int(GameState.match_time) / 60, int(GameState.match_time) % 60]
 			next_button.visible = Campaign.next_room() >= 0
+		if rules != null and rules.after_waves == "win":
+			overlay_note.text = (overlay_note.text + "\n" + tr("Вы выстояли: все %d волн отбиты.") % rules.waves.size()).strip_edges()
 	else:
 		overlay_title.text = tr("Поражение")
 		overlay_note.text = tr("Ваша крепость пала.")
@@ -1098,14 +1102,27 @@ func _refresh_mode() -> void:
 	if mode_bar.visible:
 		card_info.visible = false   # they share the space over the bottom bar
 
+## A wave of a room is down: say so, with what it left us.
+func _on_wave_beaten(index: int, reward: Dictionary) -> void:
+	if GameState.spectating or not GameState.is_playing():
+		return
+	if reward.is_empty():
+		say(tr("Волна %d отбита") % (index + 1), UiStyle.GOOD)
+		return
+	say(tr("Волна %d отбита! Трофеи: %s") % [index + 1, ", ".join(_goods(reward))], UiStyle.GOLD_BRIGHT)
+
+## "+40 дерева, +30 руды": what a chest or a beaten wave gives.
+func _goods(amounts: Dictionary) -> Array:
+	var got := []
+	for resource in amounts:
+		got.append(tr({"wood": "+%d дерева", "ore": "+%d руды", "gold": "+%d золота"}[resource]) % int(amounts[resource]))
+	return got
+
 func _on_camp_cleared(team: int, bounty: Dictionary) -> void:
 	if GameState.spectating:
 		return
 	if team == GameState.human_team:
-		var got := []
-		for resource in bounty:
-			got.append(tr({"wood": "+%d дерева", "ore": "+%d руды", "gold": "+%d золота"}[resource]) % int(bounty[resource]))
-		say(tr("Лагерь разбойников разгромлен! Добыча: %s") % ", ".join(got), UiStyle.GOLD_BRIGHT)
+		say(tr("Лагерь разбойников разгромлен! Добыча: %s") % ", ".join(_goods(bounty)), UiStyle.GOLD_BRIGHT)
 	elif team != Team.Id.NEUTRAL:
 		say(tr("Противник разгромил лагерь разбойников"), UiStyle.BAD)
 

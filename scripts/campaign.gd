@@ -1,5 +1,5 @@
 extends Node
-## The campaign (autoload `Campaign`): three rooms played in turn, each its own
+## The campaign (autoload `Campaign`): rooms played in turn, each its own
 ## map with its own twist. Winning a room opens the next; how well it was won
 ## is kept as one to three stars, in a ConfigFile of its own.
 ##
@@ -12,7 +12,11 @@ signal room_finished(index: int, stars: int)
 const SAVE_PATH := "user://campaign.cfg"
 
 ## The rooms, in order. `fast` is the time (s) to win within for the second
-## star, `castle` the share of the castle's health to keep for the third.
+## star, `castle` the share of the castle's health to keep for the third. A room
+## that can not be won faster (a holdout: the waves set the pace) has no `fast`
+## and gives the second star for keeping `castle_high` of the castle instead.
+## `waves` and the rest of a room's twist are read by RoomRules, which says
+## what each key does; `ai` is the enemy's strategy where it has a castle.
 const ROOMS := [
 	{
 		"id": "forest", "title": "Лесной рубеж", "map": "res://resources/maps/campaign_forest.tres",
@@ -37,6 +41,30 @@ const ROOMS := [
 			{"at": 240.0, "units": {"spearman": 4, "archer": 3}},
 			{"at": 330.0, "units": {"spearman": 4, "archer": 3, "knight": 2}},
 			{"at": 420.0, "units": {"knight": 4, "archer": 4, "crossbowman": 2}},
+		],
+	},
+	{
+		"id": "ring", "title": "В кольце", "map": "res://resources/maps/campaign_ring.tres",
+		"brief": "Наш замок стоит посреди долины, и враги идут на него с обеих сторон, волна за волной. Своей крепости у них здесь нет — только орда из-за леса. Стройте, куйте, нанимайте и держитесь, пока не отбита последняя волна. За каждую отбитую крупную волну — трофейные припасы.",
+		"goal": "Отбить все волны и сохранить замок.",
+		"castle": 0.5, "castle_high": 0.85,
+		"after_waves": "win",
+		"wave_scale": {"easy": 0.7, "normal": 1.0, "hard": 1.35},
+		"waves": [
+			# a probe from each side in turn, a little bigger each time
+			{"at": 100.0, "from": "west", "units": {"warrior": 3}, "repeat": 1, "every": 90.0, "grow": 0.34},
+			{"at": 145.0, "from": "east", "units": {"warrior": 3}, "repeat": 1, "every": 90.0, "grow": 0.34},
+			{"at": 280.0, "from": ["west", "east"], "units": {"warrior": 4, "spearman": 4},
+				"reward": {"wood": 60, "ore": 40}},
+			{"at": 360.0, "from": "west", "units": {"spearman": 4, "archer": 3}, "reward": {"ore": 40}},
+			{"at": 430.0, "from": "east", "units": {"axeman": 3, "archer": 3, "scout": 3},
+				"say": "Лазутчики идут резать рабочих!"},
+			{"at": 510.0, "from": ["west", "east"], "units": {"spearman": 4, "archer": 4, "torchbearer": 4},
+				"say": "Поджигатели! Берегите постройки.", "reward": {"wood": 80, "ore": 60, "gold": 20}},
+			{"at": 600.0, "from": "west", "units": {"swordsman": 5, "crossbowman": 3}, "kit": ["shield"]},
+			{"at": 660.0, "from": "east", "units": {"swordsman": 5, "crossbowman": 3}, "kit": ["shield"]},
+			{"at": 760.0, "from": ["west", "east"], "units": {"knight": 4, "greatsword": 4, "crossbowman": 4, "mage": 2},
+				"say": "Последняя волна: рыцари орды!", "reward": {"gold": 40}},
 		],
 	},
 ]
@@ -115,7 +143,9 @@ func _on_match_started() -> void:
 func score(match_time: float, castle_share: float) -> int:
 	var room: Dictionary = ROOMS[current]
 	var earned := 1
-	if match_time <= float(room["fast"]):
+	if room.has("fast") and match_time <= float(room["fast"]):
+		earned += 1
+	elif not room.has("fast") and castle_share >= float(room.get("castle_high", 1.0)):
 		earned += 1
 	if castle_share >= float(room["castle"]):
 		earned += 1
