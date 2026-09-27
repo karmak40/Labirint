@@ -21,6 +21,8 @@ const GIVE_UP := 9.0           ## seconds after which an errand that is going no
 ## Or "smith": it stands at an anvil of its side's forge and beats out arms
 ## and kit. Or "recruit": a man hired for a soldier on order (`draft`), who
 ## fetches his arms from the forge and takes them to the barracks to train.
+## Or "repair": it goes round its side's hurt buildings with a hammer, a
+## little wood a blow (Building.repair_blow), keeping clear of any fighting.
 @export var job := "wood"
 ## What it did before it was put to the anvil, to go back to afterwards.
 var former_job := ""
@@ -30,12 +32,28 @@ var anvil := 0
 ## For a recruit: the order he is filling.
 var draft: Draft = null
 
+## For a builder: the site it is putting up.
+var site: Building = null
+
+## For a repairer: the building it is mending.
+var mending: Building = null
+var _look_left := 0.0
+
+const TROPHY_REACH := 320.0    ## how far a labourer goes out of its way for a trophy
+const TROPHY_LOOK := 0.5
+const TROPHY_DROP_REACH := 16.0
+var _loot_left := 0.0
+
+const REPAIR_REACH := 14.0     ## how near its spot by the wall it has to stand
+const THREAT := 170.0          ## no mending with an enemy this near the building
+const REPAIR_LOOK := 0.5       ## how often it looks round for the next job and for danger
 const RECRUIT_PACE := 1.0      ## a recruit walks, he does not trudge like a man carrying logs
 const COLLECT_REACH := 14.0    ## how near where he waits for his arms
 const DOOR_REACH := 20.0       ## and the barracks door
 
-const ANVIL_REACH := 8.0       ## how near the smith's spot it has to stand
+const ANVIL_REACH := 14.0      ## how near the smith's spot it has to stand
 const WORKER_LAYER := 2        ## a physics layer of their own (see _ready)
+const AVOID_LAYER := 2         ## and an avoidance layer of their own
 
 enum Task { IDLE, TO_SOURCE, GATHERING, FETCHING, DELIVERING }
 
@@ -50,6 +68,7 @@ var path: Pathfinder
 
 func _ready() -> void:
 	super()
+	decays = Pen.crowd_mode
 	add_to_group("workers")
 	# Labourers bump into the world -- trunks, walls, veins -- but not into
 	# bodies: in a crowded wood five of them shoving each other between the
@@ -58,6 +77,11 @@ func _ready() -> void:
 	collision_mask = 1
 	_take_tools()
 	path = Pathfinder.new(speed)
+	# and in the crowd's steering they reckon only with each other: a carrier
+	# bending round every soldier of a big idle army on its way home crept
+	# along at a walking pace of nothing, and the store dried up
+	path.avoidance_layers = AVOID_LAYER
+	path.avoidance_mask = AVOID_LAYER
 	add_child(path)
 	set_process_unhandled_key_input(false)   # a head, not a keyboard, drives it
 
@@ -65,7 +89,7 @@ func _take_tools() -> void:
 	match job:
 		"wood":
 			weapon = Weapon.AXE
-		"smith":
+		"smith", "repair", "build":
 			weapon = Weapon.HAMMER
 		"recruit":
 			weapon = draft.carried_weapon() if draft != null and draft.stage == Draft.Stage.CARRYING else Weapon.NONE
@@ -76,8 +100,11 @@ func _take_tools() -> void:
 func set_job(next: String) -> void:
 	if next == job:
 		return
-	if next == "smith" and job != "recruit":
+	if ["smith", "repair", "build"].has(next) and not ["recruit", "smith", "repair", "build"].has(job):
 		former_job = job
+	mending = null
+	if next != "build":
+		site = null
 	if next != "smith":
 		smithy = null
 	job = next
@@ -112,8 +139,19 @@ func _physics_process(delta: float) -> void:
 	_refresh_ring()
 	_decide(delta)
 	if path.has_floor_plan():
-		wish = path.settle(wish, task == Task.IDLE and not is_attacking())
+		var own_way := wish
+		wish = path.settle(wish, task == Task.IDLE and not is_attacking() and not _holds_ground())
+		# a smith at his anvil keeps his place: nobody shoulders him off it, and
+		# he walks the last few steps to it straight, not round whoever is there
+		if _holds_ground():
+			wish = own_way
 	super(delta)
+
+const HOLD_GROUND := 30.0      ## how near its anvil a smith stops giving way
+
+func _holds_ground() -> bool:
+	var forge := my_forge() if is_smith() else null
+	return forge != null and global_position.distance_to(forge.smith_spot(anvil)) < HOLD_GROUND
 
 func _decide(delta: float) -> void:
 	task_time += delta
@@ -122,8 +160,12 @@ func _decide(delta: float) -> void:
 	if is_dead or is_flinching() or is_attacking():
 		return
 
+	if carried_item is Trophy:
+		_deliver_trophy()
+		return
+
 	if carried_item != null:
-		if Stockpile.kind_of(carried_item) == "" or is_smith():
+		if Stockpile.kind_of(carried_item) == "" or is_smith() or job == "repair" or job == "build":
 			put_down_rock()   # picked up the wrong thing: not ours to carry
 			return
 		_deliver()
@@ -135,6 +177,20 @@ func _decide(delta: float) -> void:
 
 	if job == "recruit":
 		_enlist()
+		return
+
+	if job == "repair":
+		_repair(delta)
+		return
+
+	if job == "build":
+		_construct()
+		return
+
+	# a trophy lying near is worth a detour, if there is a forge to take it to
+	var loot := _trophy_within(TROPHY_REACH, delta)
+	if loot != null:
+		_fetch(loot)
 		return
 
 	var loose := _loose_piece(LOOSE_SEARCH)
@@ -180,12 +236,173 @@ func at_anvil() -> bool:
 	var forge := my_forge()
 	return is_smith() and forge != null and global_position.distance_to(forge.smith_spot(anvil)) <= ANVIL_REACH * 1.5
 
-## At the anvil the hammer comes down on the work, not on whoever is near.
+## At the anvil the hammer comes down on the work, and at a wall it mends
+## it, not on whoever is near.
 func land_strike() -> void:
 	if at_anvil():
 		my_forge().hammer_blow(anvil)
 		return
+	if at_site():
+		site.build_blow()
+		return
+	if at_mending():
+		# a blow already swinging when the enemy turned up is let fall, and the
+		# wall is left until they have gone
+		if _threatened(mending):
+			mending = null
+			return
+		var side := PlayerState.of_team(get_tree(), team)
+		mending.repair_blow(side.economy if side != null else null)
+		return
 	super()
+
+## The nearest trophy within `within` that nobody else is going for and no
+## enemy is standing by -- only while there is a forge of ours to take it to.
+## Looked for every TROPHY_LOOK; the one being fetched is kept in between.
+var _loot: Trophy = null
+
+func _trophy_within(within: float, delta: float) -> Trophy:
+	_loot_left -= delta
+	if _loot_left > 0.0:
+		return _loot if _loot != null and is_instance_valid(_loot) and _loot.can_be_taken() else null
+	_loot_left = TROPHY_LOOK
+	_loot = null
+	if _nearest_forge() == null:
+		return null
+	var best_distance := within
+	for node in get_tree().get_nodes_in_group("trophies"):
+		var trophy := node as Trophy
+		if trophy == null or not trophy.can_be_taken() or trophy.is_queued_for_deletion():
+			continue
+		if shunned.has(trophy.get_instance_id()) or _claimed_by_another(trophy):
+			continue
+		var distance := global_position.distance_to(trophy.global_position)
+		if distance >= best_distance or _danger_at(trophy.global_position):
+			continue
+		# one already set down at a forge is the forge's
+		if _at_a_forge(trophy.global_position):
+			continue
+		best_distance = distance
+		_loot = trophy
+	return _loot
+
+## Carries a trophy to the nearest forge of ours and sets it down there.
+func _deliver_trophy() -> void:
+	fetching = null
+	var forge := _nearest_forge()
+	if forge == null:
+		put_down_rock()
+		return
+	_set_task(Task.DELIVERING)
+	if _walk_to(forge.trophy_point(), TROPHY_DROP_REACH, WORK_SPEED):
+		put_down_rock()
+
+func _nearest_forge() -> Forge:
+	var best: Forge = null
+	for node in get_tree().get_nodes_in_group("forges"):
+		var forge := node as Forge
+		if forge == null or forge.team != team or not forge.is_alive() or not forge.is_complete():
+			continue
+		if best == null or global_position.distance_squared_to(forge.global_position) < global_position.distance_squared_to(best.global_position):
+			best = forge
+	return best
+
+func _at_a_forge(point: Vector2) -> bool:
+	for node in get_tree().get_nodes_in_group("forges"):
+		if point.distance_to((node as Forge).trophy_point()) <= Forge.TROPHY_RADIUS:
+			return true
+	return false
+
+## Whether a living enemy stands within THREAT of `point`.
+func _danger_at(point: Vector2) -> bool:
+	for node in get_tree().get_nodes_in_group("targets"):
+		var body := node as PlayerBody
+		if body != null and body.is_alive() and Team.hostile(team, body.team) \
+				and point.distance_to(body.global_position) < THREAT:
+			return true
+	return false
+
+## To the site, and hammer until it stands; then back to what it did before.
+func _construct() -> void:
+	fetching = null
+	if site == null or not is_instance_valid(site) or not site.is_alive() or site.is_complete():
+		set_job(former_job if former_job != "" else "wood")
+		return
+	if not _walk_to(site.approach_from(global_position), REPAIR_REACH, WORK_SPEED):
+		_set_task(Task.TO_SOURCE)
+		return
+	var dx := site.nearest_point(global_position).x - global_position.x
+	if absf(dx) > 1.0:
+		facing_x = signf(dx)
+	_set_task(Task.GATHERING)
+	# may refuse for want of breath; it simply tries again next frame
+	attack()
+
+## Whether it is stood at the site it is putting up.
+func at_site() -> bool:
+	return job == "build" and site != null and is_instance_valid(site) and not site.is_complete() \
+		and global_position.distance_to(site.approach_from(global_position)) <= REPAIR_REACH * 2.0
+
+## Round the side's hurt buildings: the worst first, but not one with an
+## enemy by it, nor any at all without the wood to pay for it.
+func _repair(delta: float) -> void:
+	fetching = null
+	_look_left -= delta
+	if _look_left <= 0.0:
+		_look_left = REPAIR_LOOK
+		if mending == null or not is_instance_valid(mending) or not mending.needs_repair() or _threatened(mending):
+			mending = _worst_hurt()
+	if mending == null or not is_instance_valid(mending) or not mending.needs_repair():
+		mending = null
+		# nothing to mend: out over the field for trophies
+		var loot := _trophy_within(SEARCH, delta)
+		if loot != null:
+			_fetch(loot)
+			return
+		_set_task(Task.IDLE)
+		_stand_clear()
+		return
+	var spot := mending.approach_from(global_position)
+	if not _walk_to(spot, REPAIR_REACH, WORK_SPEED):
+		_set_task(Task.TO_SOURCE)
+		return
+	var dx := mending.nearest_point(global_position).x - global_position.x
+	if absf(dx) > 1.0:
+		facing_x = signf(dx)
+	var side := PlayerState.of_team(get_tree(), team)
+	if side == null or not side.economy.can_afford(Building.REPAIR_COST):
+		_set_task(Task.IDLE)
+		return
+	_set_task(Task.GATHERING)
+	# may refuse for want of breath; it simply tries again next frame
+	attack()
+
+## Whether it is stood by the wall it is mending.
+func at_mending() -> bool:
+	return job == "repair" and mending != null and is_instance_valid(mending) \
+		and global_position.distance_to(mending.approach_from(global_position)) <= REPAIR_REACH * 2.0
+
+## The hurt building of ours that has lost the most, of those with no enemy by it.
+func _worst_hurt() -> Building:
+	var best: Building = null
+	var best_share := 1.0
+	for node in get_tree().get_nodes_in_group("buildings"):
+		var building := node as Building
+		if building == null or building.team != team or not building.needs_repair():
+			continue
+		var share := building.health / building.health_max
+		if share < best_share and not _threatened(building):
+			best_share = share
+			best = building
+	return best
+
+func _threatened(building: Building) -> bool:
+	for node in get_tree().get_nodes_in_group("targets"):
+		var body := node as PlayerBody
+		if body != null and body.is_alive() and Team.hostile(team, body.team) \
+				and building.nearest_point(body.global_position).distance_to(body.global_position) < THREAT:
+			return true
+	return false
 
 ## A recruit's errand: to the forge for his arms, then to the barracks with
 ## them. Where there is nowhere to go yet he waits out of the way.
@@ -242,7 +459,7 @@ func _fetch(piece: Carriable) -> void:
 		_shun(piece)
 		return
 	if _walk_to(piece.global_position, LIFT_REACH, WORK_SPEED):
-		pick_up()
+		pick_up(piece)
 
 func _gather() -> void:
 	fetching = null
@@ -307,8 +524,9 @@ func _nearest_source_among(shared: bool) -> Node2D:
 			continue
 		if not shared and _worked_by_another(candidate):
 			continue
-		# a trunk under the other side's tower is not worth the walk
-		if _under_hostile_tower(candidate.global_position):
+		# a trunk under the other side's tower is not worth the walk, nor a seam
+		# with bandits camped by it
+		if _under_hostile_tower(candidate.global_position) or BanditCamp.guarded(get_tree(), candidate.global_position):
 			continue
 		var distance := global_position.distance_to(candidate.global_position)
 		if distance < best_distance:

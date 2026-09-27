@@ -33,11 +33,11 @@ func _enemy_keep() -> Base:
 ## The line the HUD shows under the store: what to do now.
 func objective() -> String:
 	if waves.is_empty() or open:
-		return room.get("goal", "")
+		return tr(room["goal"]) if room.has("goal") else ""
 	if sent < waves.size():
 		var next: Dictionary = waves[sent]
-		return "Волна %d из %d через %d с" % [sent + 1, waves.size(), maxi(0, int(next["at"] - clock))]
-	return "Отбейте последнюю волну: осталось %d" % _wave_left()
+		return tr("Волна %d из %d через %d с") % [sent + 1, waves.size(), maxi(0, int(next["at"] - clock))]
+	return tr("Отбейте последнюю волну: осталось %d") % _wave_left()
 
 func _wave_left() -> int:
 	var left := 0

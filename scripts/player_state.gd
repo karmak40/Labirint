@@ -110,6 +110,8 @@ func _physics_process(delta: float) -> void:
 	if _supply_left <= 0.0:
 		_supply_left = SUPPLY_EVERY
 		_supply()
+		_staff_sites()
+		_staff_anvils(SUPPLY_EVERY)
 	if researching == "":
 		return
 	# the scholars and their notes go with the building
@@ -250,33 +252,143 @@ func smith() -> Worker:
 
 ## An anvil in a finished forge with nobody at it: [forge, index], or [] for none.
 func free_anvil() -> Array:
-	var at := smiths()
 	for smithy in forges():
-		for i in Forge.ANVILS.size():
-			var taken := false
-			for hand in at:
-				if hand.smithy == smithy and hand.anvil == i:
-					taken = true
-			if not taken:
-				return [smithy, i]
+		var i := _free_anvil_of(smithy)
+		if i >= 0:
+			return [smithy, i]
 	return []
 
-## Puts a labourer to a free anvil: from whichever of wood and ore has the
-## most hands, the one nearest the forge. False if there is no free anvil or
-## nobody to spare.
-func assign_smith() -> bool:
-	var spot := free_anvil()
-	if spot.is_empty():
+## Which of `smithy`'s anvils has nobody at it, the one with a piece half made
+## on it first; -1 for none.
+func _free_anvil_of(smithy: Forge) -> int:
+	var at := smiths()
+	var best := -1
+	for i in Forge.ANVILS.size():
+		var taken := false
+		for hand in at:
+			if hand.smithy == smithy and hand.anvil == i:
+				taken = true
+		if not taken and (best < 0 or smithy.on_anvil[i] != ""):
+			best = i
+	return best
+
+## Smiths come and go with the work, as builders do: an anvil with work waiting
+## and nobody at it gets a labourer (from whichever trade has the most hands,
+## the one nearest the forge), and a smith whose anvil has had nothing to do
+## for SMITH_LINGER seconds goes back to what he did before.
+const SMITH_LINGER := 3.0
+var _smith_idle := {}          ## smith -> seconds his anvil has had no work
+
+func _staff_anvils(step: float) -> void:
+	for smithy in forges():
+		var work := smithy.queue.size()
+		for item in smithy.on_anvil:
+			if item != "":
+				work += 1
+		var at := 0
+		for hand in smiths():
+			if hand.smithy == smithy:
+				at += 1
+		while at < mini(work, Forge.ANVILS.size()):
+			var anvil := _free_anvil_of(smithy)
+			if anvil < 0 or not _send_smith(smithy, anvil):
+				break
+			at += 1
+	var idle := {}
+	for hand in smiths():
+		var smithy := hand.my_forge()
+		if smithy != null and smithy.has_work(hand.anvil):
+			continue
+		idle[hand] = float(_smith_idle.get(hand, 0.0)) + step
+		if idle[hand] > SMITH_LINGER:
+			idle.erase(hand)
+			hand.set_job(hand.former_job if hand.former_job != "" else "wood")
+	_smith_idle = idle
+
+## Puts a labourer to `anvil` of `smithy`. False with nobody to spare.
+func _send_smith(smithy: Forge, anvil: int) -> bool:
+	# the last man on the wood and the ore is left to them
+	var best := _spare_hand_near(smithy.global_position, 1)
+	if best == null:
 		return false
-	var smithy: Forge = spot[0]
+	best.set_job("smith")
+	best.smithy = smithy
+	best.anvil = anvil
+	return true
+
+## The labourer to take off his trade for another job near `point`: from
+## whichever trade has the most hands (gold last, it is scarce), the nearest.
+## Null if there are no more than `keep` on the trades.
+func _spare_hand_near(point: Vector2, keep: int = 0) -> Worker:
 	var counts := hands()
+	if int(counts["wood"]) + int(counts["ore"]) + int(counts["gold"]) <= keep:
+		return null
 	var best: Worker = null
 	var best_score := INF
 	for hand in workers():
 		if not TRADES.has(hand.job):
 			continue
-		# the trade with the most hands gives one up first; gold is scarce
-		var score := hand.global_position.distance_to(smithy.global_position) - 10000.0 * float(counts[hand.job])
+		var score := hand.global_position.distance_to(point) - 10000.0 * float(counts[hand.job])
+		if hand.job == "gold":
+			score += 100000.0
+		if score < best_score:
+			best_score = score
+			best = hand
+	return best
+
+# --- builders -----------------------------------------------------------------
+
+## The hand putting up `building`, if one is on it.
+func builder_of(building: Building) -> Worker:
+	for hand in workers():
+		if hand.job == "build" and hand.site == building:
+			return hand
+	return null
+
+## Sends a labourer to put up a site: from whichever trade has the most
+## hands, the one nearest the site. It goes back to that trade when done.
+func send_builder(building: Building) -> bool:
+	var best := _spare_hand_near(building.global_position)
+	if best == null:
+		return false
+	best.set_job("build")
+	best.site = building
+	return true
+
+## Every site of ours still going up with nobody on it gets a builder, as
+## soon as there is a hand to send (the one sent may have been killed).
+func _staff_sites() -> void:
+	for building in buildings:
+		if is_instance_valid(building) and building.needs_builder and building.is_alive() \
+				and not building.is_complete() and builder_of(building) == null:
+			send_builder(building)
+
+# --- repairers ----------------------------------------------------------------
+
+const REPAIRERS_MAX := 4
+
+## The hands going round our buildings with a hammer.
+func repairers() -> Array[Worker]:
+	var found: Array[Worker] = []
+	for hand in workers():
+		if hand.job == "repair":
+			found.append(hand)
+	return found
+
+## Puts a labourer to mending: from whichever of wood and ore has the most
+## hands, the one nearest the castle. False if there are enough already or
+## nobody to spare.
+func assign_repairer() -> bool:
+	if repairers().size() >= REPAIRERS_MAX:
+		return false
+	var counts := hands()
+	var home := base().global_position if base() != null else Vector2.ZERO
+	var best: Worker = null
+	var best_score := INF
+	for hand in workers():
+		if not TRADES.has(hand.job):
+			continue
+		var score := hand.global_position.distance_to(home) - 10000.0 * float(counts[hand.job])
 		if hand.job == "gold":
 			score += 100000.0
 		if score < best_score:
@@ -284,19 +396,24 @@ func assign_smith() -> bool:
 			best = hand
 	if best == null:
 		return false
-	best.set_job("smith")
-	best.smithy = smithy
-	best.anvil = spot[1]
+	best.set_job("repair")
 	return true
 
-## Sends a smith back to what it did before: the last one put to an anvil.
-func release_smith() -> bool:
-	var all := smiths()
+## Sends a repairer back to what it did before.
+func release_repairer() -> bool:
+	var all := repairers()
 	if all.is_empty():
 		return false
 	var hand: Worker = all[all.size() - 1]
-	hand.set_job(hand.former_job if hand.former_job != "" else "wood")
+	hand.set_job(hand.former_job if hand.former_job != "" else least_staffed_job())
 	return true
+
+## Whether any building of ours is hurt and finished.
+func anything_to_repair() -> bool:
+	for building in buildings:
+		if is_instance_valid(building) and building.needs_repair():
+			return true
+	return false
 
 func has_forge_site() -> bool:
 	return forge_sites() > 0
@@ -510,7 +627,7 @@ const TRADES := ["wood", "ore", "gold"]
 
 ## How many hands on each trade (and at the anvil).
 func hands() -> Dictionary:
-	var count := {"wood": 0, "ore": 0, "gold": 0, "smith": 0}
+	var count := {"wood": 0, "ore": 0, "gold": 0, "smith": 0, "repair": 0, "build": 0}
 	for hand in workers():
 		count[hand.job] = int(count.get(hand.job, 0)) + 1
 	return count

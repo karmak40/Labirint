@@ -25,6 +25,11 @@ var _finished := false
 var _closing := -1             ## frames left before quitting, once finished
 
 func _initialize() -> void:
+	# A headless window is 0x0, which the project's "expand" aspect turns into a
+	# 960x960 view; tests keep the 960x540 screen they were written for.
+	root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+	# tests read the Russian source texts, whatever language the player chose
+	TranslationServer.set_locale("ru")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(ACHIEVEMENTS_FILE))
 	var achievements := root.get_node_or_null("Achievements")
 	if achievements != null:

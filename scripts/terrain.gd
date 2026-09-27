@@ -1,7 +1,8 @@
 class_name Terrain
 extends Node2D
 ## The look of the land a match is fought on: grass, a road between the castles,
-## trodden earth where people work, and a sky with hills beyond the far edge.
+## trodden earth where people work, and beyond both long edges the woods the
+## field is cut out of, falling away into the dark.
 ##
 ## Presentation only. Nothing here blocks, nothing is struck, nothing counts --
 ## the field is the same field it was on the grey debug floor. Its randomness
@@ -9,12 +10,11 @@ extends Node2D
 ##
 ## All of it is drawn once, through Pens, into strips a few hundred pixels
 ## wide: a strip is one draw call however much grass is in it, the renderer
-## skips the strips off screen, and nothing is redrawn frame by frame. The
-## only thing that moves is the clouds, and they move without being redrawn.
+## skips the strips off screen, and nothing is redrawn frame by frame.
 
 const STRIP := 500.0           ## width of one pre-drawn piece of land
 const SIDE := 420.0            ## land carried on past each end of the field
-const SKY := 420.0             ## how far up beyond the far edge the sky goes
+const FAR := 160.0             ## how far up beyond the far edge the land goes on
 const BANK := 160.0            ## and how far down beyond the near edge the earth
 
 const GRASS := Color(0.36, 0.50, 0.27)
@@ -34,15 +34,9 @@ const SOIL := Color(0.33, 0.25, 0.17)
 const SOIL_DEEP := Color(0.16, 0.12, 0.09)
 const FLOWERS := [Color(0.95, 0.93, 0.85), Color(0.97, 0.84, 0.30), Color(0.72, 0.56, 0.86), Color(0.92, 0.50, 0.46)]
 
-const SKY_HIGH := Color(0.38, 0.56, 0.82)
-const SKY_LOW := Color(0.80, 0.87, 0.92)
-const MOUNTAIN_FAR := Color(0.62, 0.69, 0.79)
-const MOUNTAIN_SNOW := Color(0.88, 0.91, 0.95)
-const HILLS := Color(0.47, 0.59, 0.47)
-const HILLS_NEAR := Color(0.36, 0.50, 0.33)
 const TREELINE := Color(0.21, 0.34, 0.21)
 const TREELINE_DARK := Color(0.16, 0.27, 0.17)
-const CLOUD := Color(1.0, 1.0, 1.0, 0.85)
+const WOODS_DEEP := Color(0.07, 0.10, 0.07)
 
 var map: MapData
 var rng := RandomNumberGenerator.new()
@@ -57,27 +51,13 @@ class Strip:
 	func _draw() -> void:
 		pen.flush(self)
 
-## One cloud, drawn once and then only moved.
-class Cloud:
-	extends Node2D
-	var puffs: Array = []      ## [offset, radius]
-	var drift := 6.0
-	var span := Vector2.ZERO   ## x range it wraps across
-	func _draw() -> void:
-		for puff in puffs:
-			draw_circle(puff[0], puff[1], CLOUD)
-	func _process(delta: float) -> void:
-		position.x += drift * delta
-		if position.x > span.y:
-			position.x = span.x
-
 func build(data: MapData) -> void:
 	map = data
 	rng.seed = hash(map.title) ^ 0x51ab
 	var size := map.floor_size
 	z_index = -3
 	road = _road_line()
-	_sky(size)
+	_far_edge(size)
 	_ground(size)
 	_forest_floor()
 	_worn_ground()
@@ -92,7 +72,6 @@ func build(data: MapData) -> void:
 			strip.pen = layer[1][index]
 			strip.name = "%s%d" % [layer[0], index]
 			add_child(strip)
-	_clouds(size)
 
 ## The pen for whatever is drawn around `x`.
 func _pen(x: float) -> Pen:
@@ -109,7 +88,7 @@ func _left() -> float:
 func _right() -> float:
 	return map.floor_size.x + SIDE
 
-## The pen for the plain ground under `x`: sky and grass, before anything else.
+## The pen for the plain ground under `x`: the woods and grass, before anything else.
 func _bed(x: float) -> Pen:
 	var index := int(floorf(x / STRIP))
 	if not beds.has(index):
@@ -126,58 +105,23 @@ func _across(from: float, to: float, paint: Callable) -> void:
 		paint.call(_bed(x + 1.0), maxf(x, from), minf(x + STRIP, to))
 		x += STRIP
 
-# --- beyond the far edge: sky, mountains, hills, the edge of the woods ----------
+# --- beyond the far edge: the woods, going dark ---------------------------------
 
-func _sky(size: Vector2) -> void:
+func _far_edge(_size: Vector2) -> void:
 	_across(_left(), _right(), func(pen: Pen, a: float, b: float) -> void:
-		pen.gradient_quad(Vector2(a, -SKY), Vector2(b, -SKY), Vector2(b, 0.0), Vector2(a, 0.0), SKY_HIGH, SKY_LOW))
-	# far mountains, pale with the distance, a few with snow on them
-	var x := _left()
-	while x < _right():
-		var wide := rng.randf_range(160.0, 320.0)
-		var tall := rng.randf_range(90.0, 170.0)
-		var peak := Vector2(x + wide * rng.randf_range(0.35, 0.65), -48.0 - tall)
-		var foot := -40.0
-		_pen(peak.x).colored_polygon(PackedVector2Array([Vector2(x, foot), peak, Vector2(x + wide, foot)]), MOUNTAIN_FAR)
-		if tall > 125.0:
-			var cap := 0.22
-			_pen(peak.x).colored_polygon(PackedVector2Array([
-				peak, peak.lerp(Vector2(x + wide, foot), cap), peak.lerp(Vector2(x, foot), cap)]), MOUNTAIN_SNOW)
-		x += wide * rng.randf_range(0.45, 0.7)
-	# rolling hills in two bands, nearer ones greener
-	for band in [[HILLS, -38.0, 46.0], [HILLS_NEAR, -18.0, 34.0]]:
-		x = _left()
+		pen.gradient_quad(Vector2(a, -FAR), Vector2(b, -FAR), Vector2(b, 0.0), Vector2(a, 0.0), WOODS_DEEP, TREELINE_DARK))
+	# the canopy of the wood the field is cut out of, in rows fading back into it
+	for row in [[-70.0, 0.55], [-40.0, 0.78], [-12.0, 1.0]]:
+		var x := _left()
 		while x < _right():
-			var r := rng.randf_range(60.0, 130.0)
-			_pen(x).ellipse(Vector2(x, band[1]), Vector2(r, band[2] * rng.randf_range(0.7, 1.2)), band[0])
-			x += r * 0.9
-	# and the edge of the woods the field is cut out of, right along its far side
-	x = _left()
-	while x < _right():
-		var r := rng.randf_range(14.0, 26.0)
-		var tone: Color = TREELINE if rng.randf() < 0.6 else TREELINE_DARK
-		_pen(x).circle(Vector2(x, -rng.randf_range(4.0, 16.0)), r, tone)
-		x += r * rng.randf_range(0.7, 1.1)
-	x = _left()
+			var r := rng.randf_range(16.0, 28.0)
+			var tone: Color = TREELINE if rng.randf() < 0.6 else TREELINE_DARK
+			_pen(x).circle(Vector2(x, row[0] - rng.randf_range(0.0, 12.0)), r, tone.darkened(1.0 - row[1]))
+			x += r * rng.randf_range(0.7, 1.1)
+	var x := _left()
 	while x < _right():
 		_pen(x).rect(Rect2(x, -8.0, minf(STRIP, _right() - x), 12.0), TREELINE_DARK)
 		x += STRIP
-
-func _clouds(size: Vector2) -> void:
-	for i in int(_right() - _left()) / 380:
-		var cloud := Cloud.new()
-		cloud.z_index = -3
-		cloud.position = Vector2(rng.randf_range(_left(), _right()), rng.randf_range(-SKY + 50.0, -150.0))
-		cloud.span = Vector2(_left() - 150.0, _right() + 150.0)
-		cloud.drift = rng.randf_range(3.0, 9.0)
-		var width := rng.randf_range(60.0, 130.0)
-		for j in rng.randi_range(4, 7):
-			var along := rng.randf_range(-width * 0.5, width * 0.5)
-			cloud.puffs.append([Vector2(along, rng.randf_range(-8.0, 6.0) - (width * 0.5 - absf(along)) * 0.15),
-				rng.randf_range(14.0, 26.0)])
-		add_child(cloud)
-
-# --- the field itself -----------------------------------------------------------
 
 func _ground(size: Vector2) -> void:
 	_across(_left(), _right(), func(pen: Pen, a: float, b: float) -> void:

@@ -27,6 +27,10 @@ static var crowd_mode := false
 ## 0 turns it off -- sharper edges, fewer triangles, for a weak device.
 static var feather := 1.0
 
+## Filming (CinemaMode): figures and buildings leave off their health and
+## stamina bars.
+static var bare := false
+
 const MIN_SEGMENTS := 8
 const MAX_SEGMENTS := 20
 

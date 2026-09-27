@@ -27,6 +27,9 @@ const GUARD_TIME := 2.6        ## how long it stands its ground before pacing ag
 const ARRIVE := 8.0            ## close enough to a point to call it reached
 const SCAN_EVERY := 0.25       ## a full look round is dear with a crowd about: not every frame
 const GOAL_SLACK := 80.0       ## how near an unreachable goal counts as there
+const HOME_SLACK := 18.0       ## pushed further than this off its place, it steps back
+const RALLY_GIVE_UP := 12.0    ## seconds on the way to a place it cannot get to
+const HOME_GIVE_UP := 6.0      ## and trying to step back to it through a crowd
 const LEASH := 200.0           ## once posted somewhere, how far from it it will chase anyone
 const WALL_BIAS := 90.0
 const HAND_BIAS := 120.0       ## marching on a goal, a labourer counts this much further off still        ## a wall counts as this much further off than a man
@@ -84,6 +87,7 @@ var quarry: Node2D = null
 var scan_left := 0.0
 var order := Order.HOLD
 var attack_goal := Vector2.ZERO
+var home_try := 0.0     ## how long it has been stepping back to its place
 var rallying := false   ## sent to a new post and not there yet: no giving up halfway
 ## How far from its post it will go after someone; 0 is no limit. A man told to
 ## hold a place holds it, rather than following the first passer-by off into
@@ -98,7 +102,9 @@ var path: Pathfinder
 ## Stand and guard here. Everything that already guards a post now guards this.
 func set_rally(point: Vector2) -> void:
 	order = Order.HOLD
-	post = point
+	# never a post inside a wall or on the ground in front of a door or an anvil:
+	# a man sent there shoved at it for ever, in everybody's way
+	post = Building.clear_of(get_tree(), point) if is_inside_tree() and Pen.crowd_mode else point
 	rallying = true
 	leash = LEASH
 	if watch == Watch.PATROL:
@@ -109,9 +115,23 @@ func set_attack_move(goal: Vector2) -> void:
 	order = Order.ATTACK_MOVE
 	attack_goal = goal
 
+## In a match soldiers are on a physics layer of their own: they bump into the
+## world and into each other, but labourers (who only mind the world) walk
+## through them -- an idle army standing on the way to the stockpile used to be
+## a wall the carriers could not get past.
+const UNIT_LAYER := 4
+
 func _ready() -> void:
 	super()
+	decays = Pen.crowd_mode
+	if Pen.crowd_mode:
+		collision_layer = UNIT_LAYER
+		collision_mask = 1 | UNIT_LAYER
 	post = global_position
+	# in a match a soldier stands his place in the ranks; the testbed's knight
+	# still paces his
+	if Pen.crowd_mode:
+		guards = false
 	_kit_out()
 	path = Pathfinder.new(speed)
 	add_child(path)
@@ -129,6 +149,103 @@ var can_mend := false          ## a healer whose side has learned to heal
 var mending: PlayerBody = null ## who the cast under way is for
 var mend_left := 0.0
 
+# --- experience ---------------------------------------------------------------
+
+## Kills that earn each star, and what a star gives: a level of skill in the
+## weapon in hand (the same stroke for less wind), a harder blow and a tougher
+## hide. Only in a match: the testbed's knight stays exactly as he was.
+const STARS_AT := [2, 5, 10]
+const STAR_HARM := 0.08
+const STAR_HEALTH := 0.10
+const STAR_GOLD := Color(1.0, 0.84, 0.30)
+const STAR_EDGE := Color(0.45, 0.30, 0.08)
+const STAR_HEIGHT := 116.0     ## over its feet: clear of the head and the health bar
+
+var kills := 0                 ## men brought down
+var razed := 0                 ## buildings brought down
+var stars := 0
+var earns_stars := Pen.crowd_mode
+
+# --- trophies ------------------------------------------------------------------
+
+## What it fell with, kept from the moment it went down; the rig lets the
+## weapon go a frame later, and the kit comes off the body as it lies.
+var _fell_with := Weapon.NONE
+var _fell_kit: Array[String] = []
+var _shed := false
+
+func _start_death(kind: DeathKind) -> bool:
+	if not is_dead and earns_stars:
+		_fell_with = weapon
+		_fell_kit.clear()
+		if helm == Helm.WORN:
+			_fell_kit.append("helm")
+		if wears_armour():
+			_fell_kit.append("armour")
+		if has_shield():
+			_fell_kit.append("shield")
+	return super(kind)
+
+## Once the rig has let the weapon go, it becomes a trophy flying the same
+## way, and the kit falls off beside the body.
+func _shed_trophies() -> void:
+	if _shed or not is_dead or not earns_stars or rig == null or not rig.was_dead:
+		return
+	_shed = true
+	var weapon_item := Trophy.item_for(_fell_with)
+	if weapon_item != "":
+		var dropped: Array = rig.dropped
+		for i in range(dropped.size() - 1, -1, -1):
+			var lying = dropped[i]
+			if lying.kind == _fell_with:
+				dropped.remove_at(i)
+				var trophy := _trophy(weapon_item)
+				trophy.launch(lying.pos, lying.z, lying.vel, lying.z_vel, lying.spin)
+				trophy.tilt = lying.angle
+				break
+	for piece in _fell_kit:
+		var trophy := _trophy(piece)
+		var toss := Vector2(randf_range(-60.0, 60.0), randf_range(-20.0, 20.0))
+		trophy.launch(global_position + Vector2(0.0, -4.0), 30.0, toss, 90.0, randf_range(-6.0, 6.0))
+	# and the body lies there without it
+	helm = Helm.NONE
+	shielded = false
+	if rig != null:
+		rig.armoured = false
+
+func _trophy(piece: String) -> Trophy:
+	var trophy := Trophy.new()
+	trophy.item = piece
+	get_parent().add_child(trophy)
+	return trophy
+
+func felled(mark: Node) -> void:
+	if not earns_stars:
+		return
+	if mark is Building:
+		razed += 1
+		return
+	kills += 1
+	while stars < STARS_AT.size() and kills >= int(STARS_AT[stars]):
+		_promote()
+
+## One more star, and what comes with it. A wound keeps its size, the new
+## health on top of what is left.
+func _promote() -> void:
+	stars += 1
+	train(weapon)
+	var gain := health_max * STAR_HEALTH
+	health_max += gain
+	if not is_dead:
+		health += gain
+	queue_redraw()
+
+## Kills still wanted for the next star, or 0 with all of them.
+func kills_to_next_star() -> int:
+	if stars >= STARS_AT.size():
+		return 0
+	return int(STARS_AT[stars]) - kills
+
 func set_scales(harm: float, toughness: float) -> void:
 	harm_scale = harm
 	if not is_equal_approx(toughness, health_scale):
@@ -139,13 +256,15 @@ func set_scales(harm: float, toughness: float) -> void:
 			health = health_max * share
 
 func strike_harm() -> float:
-	return super() * harm_scale
+	return super() * harm_scale * (1.0 + STAR_HARM * float(stars)) * Weather.shot_scale(weapon)
 
 ## A torch or an axe does more to a wall than to a man.
 func harm_against(mark: Node) -> float:
 	var harm := strike_harm()
 	if mark is Building:
 		harm *= float(LOADOUTS.get(loadout, {}).get("siege", 1.0))
+		if weapon == Weapon.TORCH:
+			harm *= Weather.fire_scale()
 	return harm
 
 ## In a match the torch is for the enemy's walls: it does not set the forest,
@@ -162,6 +281,8 @@ func _mend(delta: float) -> bool:
 	mend_left -= delta
 	if not can_mend:
 		return false
+	if mending != null and not is_instance_valid(mending):
+		mending = null
 	if mending != null:
 		if is_attacking():
 			_face(mending)
@@ -301,14 +422,28 @@ var show_ring := Pen.crowd_mode
 func _draw() -> void:
 	if show_ring and not is_dead:
 		Team.draw_foot_ring(self, team)
+	if stars > 0 and not is_dead:
+		for i in stars:
+			_draw_star(Vector2((float(i) - float(stars - 1) * 0.5) * 11.0, -STAR_HEIGHT))
+
+func _draw_star(at: Vector2) -> void:
+	var points := PackedVector2Array()
+	for k in 10:
+		var r := 5.0 if k % 2 == 0 else 2.2
+		points.append(at + Vector2.from_angle(-PI * 0.5 + k * PI / 5.0) * r)
+	draw_colored_polygon(points, STAR_GOLD)
+	points.append(points[0])
+	draw_polyline(points, STAR_EDGE, 1.0, true)
 
 func _refresh_ring() -> void:
+	# the stars go with the ring when it falls
 	if ring_drawn_alive != (not is_dead):
 		ring_drawn_alive = not is_dead
 		queue_redraw()
 
 func _physics_process(delta: float) -> void:
 	_refresh_ring()
+	_shed_trophies()
 	_decide(delta)
 	if path.has_floor_plan():
 		wish = path.settle(wish, watch == Watch.PATROL and not is_attacking())
@@ -358,7 +493,12 @@ func _decide(delta: float) -> void:
 				_set_watch(Watch.PATROL)
 			elif rallying:
 				# an order, not a drift back: walks with purpose and sees it through
-				if _walk_towards(post, ADVANCE_SPEED):
+				if _walk_towards(post, ADVANCE_SPEED) or _as_near_as_it_gets(post):
+					rallying = false
+					_set_watch(Watch.PATROL)
+				elif watch_time > RALLY_GIVE_UP:
+					# somewhere it cannot get to: a free place where it is will do
+					post = _free_place_near(global_position)
 					rallying = false
 					_set_watch(Watch.PATROL)
 			elif _walk_towards(post, PATROL_SPEED) or watch_time > GUARD_TIME:
@@ -372,7 +512,7 @@ func _set_watch(next: Watch) -> void:
 ## interest it keeps it until you are well clear, so backing off a step does not
 ## make an armed man forget about you.
 func _who_to_watch() -> Node2D:
-	var reach := LOSE_SIGHT if quarry != null else SIGHT
+	var reach := _lose_sight() if quarry != null else _sight()
 	var best: Node2D = null
 	var best_distance := reach
 	for node in get_tree().get_nodes_in_group("targets"):
@@ -403,18 +543,63 @@ func _who_to_watch() -> Node2D:
 	return best
 
 func _still_minding(mark: Node2D) -> bool:
-	return is_instance_valid(mark) and mark.is_alive() 		and Team.hostile(team, Team.of(mark)) and _within_leash(mark) 		and global_position.distance_to(Team.spot(mark, global_position)) < LOSE_SIGHT
+	return is_instance_valid(mark) and mark.is_alive() 		and Team.hostile(team, Team.of(mark)) and _within_leash(mark) 		and global_position.distance_to(Team.spot(mark, global_position)) < _lose_sight()
+
+## How far off it notices someone now: less by night and in the rain (Weather).
+func _sight() -> float:
+	return SIGHT * Weather.sight()
+
+## And how far they have to get to be left alone -- never inside a shooter's
+## own bowshot, or it would lose sight of whoever it had just stepped back from.
+func _lose_sight() -> float:
+	return maxf(LOSE_SIGHT * Weather.sight(), reach() + 40.0)
 
 func _within_leash(mark: Node2D) -> bool:
 	return order != Order.HOLD or leash <= 0.0 		or post.distance_to(Team.spot(mark, post)) <= leash
 
 func _pace() -> void:
 	if not guards:
+		# stands; shoved off its place by the crowd, it steps back quietly
+		if path.has_floor_plan() and global_position.distance_to(post) > HOME_SLACK 				and not _as_near_as_it_gets(post):
+			_walk_towards(post, PATROL_SPEED)
+			home_try += get_physics_process_delta_time()
+			if home_try > HOME_GIVE_UP:
+				home_try = 0.0
+				# walled in by the ranks: the nearest free place to where it
+				# stands will do
+				post = _free_place_near(global_position)
+		else:
+			home_try = 0.0
 		return
 	var out := global_position.x - post.x
 	if absf(out) > patrol and signf(out) == march:
 		march = -march
 	wish = Vector2(march * PATROL_SPEED, 0.0)
+
+## `point`, or the nearest spot round it that nobody of ours holds.
+func _free_place_near(point: Vector2) -> Vector2:
+	for ring in [0.0, 22.0, 44.0]:
+		for k in (1 if ring == 0.0 else 8):
+			var spot: Vector2 = point + Vector2.from_angle(TAU * k / 8.0) * ring
+			if _nobody_holds(spot):
+				return spot
+	return point
+
+## Whether no one of ours holds a place near `point`.
+func _nobody_holds(point: Vector2) -> bool:
+	for node in get_tree().get_nodes_in_group("targets"):
+		var other := node as Unit
+		if other != null and other != self and other.team == team and not other.is_dead 				and (other.post if other.order == Order.HOLD else other.attack_goal).distance_to(point) < HOME_SLACK * 1.5:
+			return false
+	return true
+
+## Whether `point` itself cannot be reached (something solid stands on it)
+## and it is already at the end of the way there.
+func _as_near_as_it_gets(point: Vector2) -> bool:
+	if not path.has_floor_plan() or path.goal.distance_to(point) > Pathfinder.REPATH:
+		return false
+	var end := path.get_final_position()
+	return end.distance_to(point) > ARRIVE and global_position.distance_to(end) < ARRIVE * 2.0
 
 ## Marching on the goal; once there, the goal simply becomes the post.
 func _advance() -> void:
@@ -422,7 +607,9 @@ func _advance() -> void:
 	# as the floor goes
 	var blocked := path.has_floor_plan() and path.is_navigation_finished() 		and global_position.distance_to(attack_goal) < GOAL_SLACK
 	if _walk_towards(attack_goal, ADVANCE_SPEED) or blocked:
-		set_rally(global_position if blocked else attack_goal)
+		# in a match the goal is a place in the ranks, kept even when the way
+		# there is jammed for a moment
+		set_rally(attack_goal if Pen.crowd_mode or not blocked else global_position)
 
 func _face(mark: Node2D) -> void:
 	if mark == null:

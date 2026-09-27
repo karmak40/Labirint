@@ -202,6 +202,8 @@ var helm := Helm.NONE
 ## A shield strapped on over a one-handed weapon (given out by the RTS forge).
 ## The sword-and-shield has its own shield and never needs this.
 var shielded := false
+## A cloth hood over the head instead of a helm: how a bandit is known at a glance.
+var hooded := false
 const SHIELD_WEAPONS := [Weapon.SWORD, Weapon.CLUB, Weapon.AXE, Weapon.DAGGER, Weapon.TORCH]
 var donning := false    ## which way round the current helm action goes
 var rise_time := -1.0   ## negative means not getting up
@@ -246,6 +248,12 @@ var grip := Carriable.Grip.ON_SHOULDER   ## a man goes over the shoulder
 var heavy := true                        ## and slows you to a trudge
 var height := 0.0                        ## how far off the floor, while carried
 var carried_by: Node2D = null
+## In a match the dead do not lie for ever (Unit and Worker switch it on): after
+## CORPSE_LIFE seconds a body fades out and is gone, and with it whatever its rig
+## let fall. The testbed's bodies stay where they drop.
+const CORPSE_LIFE := 45.0
+const CORPSE_FADE := 5.0
+var decays := false
 var carry_facing := 1.0   ## the facing actually being drawn, eased, handed over by the rig
 
 func can_be_lifted() -> bool:
@@ -364,6 +372,8 @@ func _physics_process(delta: float) -> void:
 
 	if is_dead:
 		death_time += delta
+		if decays and _decay():
+			return
 		velocity = velocity.move_toward(Vector2.ZERO, DEATH_DRAG * delta)
 		if is_rising():
 			rise_time += delta
@@ -626,7 +636,10 @@ func _nearest_target(reach: float, from_behind: bool) -> Node2D:
 func land_backstab() -> void:
 	var mark := _nearest_target(BACKSTAB_RANGE * 1.4, true)
 	if mark != null:
+		var was := _still_up(mark)
 		mark.take_backstab(global_position)
+		if was and not _still_up(mark):
+			felled(mark)
 	velocity = Vector2(facing_x * BACKSTAB_LUNGE, 0.0)
 
 ## Whatever is standing at this spot takes a blow. Used by things that travel --
@@ -642,6 +655,8 @@ func hit_target_at(world: Vector2, radius: float, damage: float) -> bool:
 			continue
 		if world.distance_to(Team.spot(mark, world)) <= radius:
 			mark.take_hit(world, damage)
+			if not mark.is_alive():
+				felled(mark)
 			return true
 	return false
 
@@ -655,7 +670,18 @@ func reset_targets() -> void:
 func land_strike() -> void:
 	var mark := _nearest_target(STRIKE_RANGE, false)
 	if mark != null:
+		var was := _still_up(mark)
 		mark.take_hit(global_position, harm_against(mark))
+		if was and not _still_up(mark):
+			felled(mark)
+
+## Called when a blow or a shot of ours was the one that brought `mark` down.
+## Nothing comes of it here; a soldier in a match counts it (Unit).
+func felled(_mark: Node) -> void:
+	pass
+
+static func _still_up(mark: Node) -> bool:
+	return mark.has_method("is_alive") and mark.is_alive()
 
 ## What a blow does to this particular mark; the same to everything, here.
 func harm_against(_mark: Node) -> float:
@@ -673,11 +699,16 @@ func is_striking() -> bool:
 ## Stoop for whatever is nearest within reach -- a rock, or a weapon lying where
 ## it was thrown or dropped. Nothing happens if there is nothing there: the reach
 ## is what decides, not the button press.
-func pick_up() -> void:
+## `wanted`, when given and within reach, is what the hands close on, rather
+## than whatever happens to be nearest (a trophy lying on its dead owner).
+func pick_up(wanted: Node2D = null) -> void:
 	if is_dead or is_attacking() or carried_item != null:
 		return
 
 	var rock := _nearest_carriable()
+	if wanted != null and is_instance_valid(wanted) and wanted.can_be_taken() \
+			and global_position.distance_to(wanted.global_position) <= PICKUP_RANGE:
+		rock = wanted
 	var weapon_range := _dropped_weapon_range()
 	if rock == null and weapon_range < 0.0:
 		return
@@ -740,8 +771,21 @@ func is_picking_up() -> bool:
 func is_throwing() -> bool:
 	return is_attacking() and attack_kind == ActionKind.THROW
 
+## Fades a body that has lain long enough, and clears it away. True once gone.
+func _decay() -> bool:
+	var left := CORPSE_LIFE - death_time
+	if left <= 0.0:
+		queue_free()
+		return true
+	if left < CORPSE_FADE:
+		modulate.a = left / CORPSE_FADE
+	return false
+
 ## Called by the rig at the moment the hand actually closes on it.
 func take_hold() -> void:
+	# whatever it reached for may have rotted away in the meantime
+	if target_item != null and not is_instance_valid(target_item):
+		target_item = null
 	if target_item != null:
 		carried_item = target_item
 		target_item = null

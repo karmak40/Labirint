@@ -66,7 +66,7 @@ const POCKET_SPOTS := [
 @export var resource_kind := "ore"
 ## How many rocks come out of it, and what each is worth at a stockpile. The
 ## defaults are the testbed's small outcrop: three rocks of one. A match's seam
-## is far richer -- twenty rocks of ten is two hundred ore -- worked the same way.
+## is far richer -- a hundred rocks of ten is a thousand ore -- worked the same way.
 @export var rocks := POCKETS
 @export var rock_worth := 1
 ## Seconds from worked out to full again; 0 leaves a spent stub for good.

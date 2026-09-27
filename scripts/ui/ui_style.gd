@@ -60,3 +60,57 @@ static func theme() -> Theme:
 static func bar(canvas: CanvasItem, rect: Rect2, share: float, fill := BAR_FILL) -> void:
 	canvas.draw_rect(rect, BAR_BACK)
 	canvas.draw_rect(Rect2(rect.position, Vector2(rect.size.x * clampf(share, 0.0, 1.0), rect.size.y)), fill)
+
+# --- screen size: phones and cut-outs ---------------------------------------------
+
+## How much bigger the HUD and menus are wanted, before they are fitted to the
+## screen: 1 on a desktop, more on a touch screen the smaller it is, so a finger
+## can hit the cards. LABIRINT_UI_SCALE overrides it (to try a phone's layout
+## on a desktop).
+static func wanted_scale() -> float:
+	var forced := OS.get_environment("LABIRINT_UI_SCALE")
+	if forced != "":
+		return maxf(0.5, forced.to_float())
+	if not DisplayServer.is_touchscreen_available():
+		return 1.0
+	var dpi := maxf(1.0, float(DisplayServer.screen_get_dpi()))
+	var inches := Vector2(DisplayServer.screen_get_size()).length() / dpi
+	if inches < 7.5:
+		return 1.35                # a phone
+	if inches < 11.0:
+		return 1.15                # a small tablet
+	return 1.0
+
+## Whether the HUD should take its compact layout (a phone or a small tablet).
+static func compact() -> bool:
+	return wanted_scale() > 1.05
+
+## What the screen's cut-outs and rounded corners take from each edge, in the
+## viewport's units: position is left/top, size is right/bottom. Zero on a
+## desktop window.
+static func safe_margins(port: Viewport) -> Rect2:
+	var window := Vector2(DisplayServer.window_get_size())
+	var safe := Rect2(DisplayServer.get_display_safe_area())
+	if window.x <= 0.0 or window.y <= 0.0 or not safe.has_area():
+		return Rect2()
+	var screen := Vector2(DisplayServer.screen_get_size())
+	# only meaningful when the window fills the screen (a phone); a desktop window
+	# somewhere on a monitor has nothing cut out of it
+	if not window.is_equal_approx(screen):
+		return Rect2()
+	var units := port.get_visible_rect().size / window
+	var near := safe.position.max(Vector2.ZERO) * units
+	var far := (window - safe.end).max(Vector2.ZERO) * units
+	return Rect2(near, far)
+
+## Lays `control` over the viewport inside the safe margins, drawn `scale`
+## times bigger: its own size is what fits at that scale, so anchored children
+## lay out as on a smaller screen and come out big.
+static func fit(control: Control, scale: float) -> void:
+	var port := control.get_viewport()
+	var margins := safe_margins(port)
+	var room := port.get_visible_rect().size - margins.position - margins.size
+	control.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	control.scale = Vector2(scale, scale)
+	control.position = margins.position
+	control.size = room / scale

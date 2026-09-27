@@ -43,6 +43,12 @@ var bar_width := 56.0
 ## the map stands up whole.
 var build_time := 0.0
 var built := 1.0               ## 0 a marked-out site, 1 finished
+## Laid out in a match: it rises only under a builder's hammer (`build_blow`),
+## `build_time` seconds of hammering in all. Anything else rises on its own.
+var needs_builder := false
+const BUILD_BLOW := 0.75       ## seconds of work one blow is worth
+const DUST_TIME := 0.35
+var _dust := 1.0               ## seconds since the last blow, for the puff it raises
 
 var health := 0.0
 var flash := 0.0
@@ -75,13 +81,24 @@ func _tick_construction(delta: float) -> bool:
 		return false
 	if not is_alive():
 		return true
-	var step := delta / build_time
+	if needs_builder:
+		return true
+	_raise(delta / build_time)
+	return not is_complete()
+
+## A blow of a builder's hammer on the site.
+func build_blow() -> void:
+	if is_complete() or not is_alive():
+		return
+	_dust = 0.0
+	_raise(BUILD_BLOW / build_time)
+
+func _raise(step: float) -> void:
 	built = minf(1.0, built + step)
 	health = minf(health_max, health + health_max * (1.0 - SITE_START) * step)
 	queue_redraw()
 	if is_complete():
 		completed.emit(self)
-	return not is_complete()
 
 func _physics_process(delta: float) -> void:
 	_tick_construction(delta)
@@ -101,6 +118,51 @@ func approach_from(from: Vector2) -> Vector2:
 
 func team_of() -> int:
 	return team
+
+## Ground in front of it that has to stay open, as a rectangle in the world:
+## a door people go in and out of, anvils smiths stand at. Nothing may be
+## built on it, and nobody is posted to stand on it. Empty for none.
+func apron() -> Rect2:
+	return apron_at(global_position)
+
+## The same, for one standing at `origin` (for a building not yet put down).
+func apron_at(_origin: Vector2) -> Rect2:
+	return Rect2()
+
+## `point`, moved just clear of any building standing on it or on the open
+## ground in front of one -- somewhere a man can actually stand.
+static func clear_of(tree: SceneTree, point: Vector2, margin: float = 24.0) -> Vector2:
+	if tree == null:
+		return point
+	for pass_ in 3:
+		var moved := false
+		for node in tree.get_nodes_in_group("buildings"):
+			var building := node as Building
+			if building == null or not building.is_alive():
+				continue
+			var body := Rect2(building.global_position - building.footprint * 0.5, building.footprint).grow(margin)
+			for keep_off in [body, building.apron()]:
+				if keep_off.has_area() and keep_off.has_point(point):
+					point = _out_of(keep_off, point)
+					moved = true
+		if not moved:
+			break
+	return point
+
+## The nearest point just outside `area` from `point` inside it.
+static func _out_of(area: Rect2, point: Vector2) -> Vector2:
+	var to_left := point.x - area.position.x
+	var to_right := area.end.x - point.x
+	var to_top := point.y - area.position.y
+	var to_bottom := area.end.y - point.y
+	var least := minf(minf(to_left, to_right), minf(to_top, to_bottom))
+	if least == to_left:
+		return Vector2(area.position.x - 2.0, point.y)
+	if least == to_right:
+		return Vector2(area.end.x + 2.0, point.y)
+	if least == to_top:
+		return Vector2(point.x, area.position.y - 2.0)
+	return Vector2(point.x, area.end.y + 2.0)
 
 func is_alive() -> bool:
 	return health > 0.0
@@ -122,6 +184,23 @@ func take_hit(_from: Vector2 = Vector2.INF, damage: float = 10.0) -> void:
 		destroyed.emit(self)
 	queue_redraw()
 
+## What a blow of a repairer's hammer puts back, and what it costs the side.
+const REPAIR_HP := 12.0
+const REPAIR_COST := {"wood": 1}
+
+## Whether a repairer has anything to do here: finished, standing, and hurt.
+func needs_repair() -> bool:
+	return is_alive() and is_complete() and health < health_max
+
+## A blow of a repairer's hammer: paid for out of `store`, a little health
+## back. False, and nothing taken, if there is nothing to mend or no wood.
+func repair_blow(store: Economy) -> bool:
+	if not needs_repair() or store == null or not store.spend(REPAIR_COST):
+		return false
+	health = minf(health_max, health + REPAIR_HP)
+	queue_redraw()
+	return true
+
 ## What happens when it goes. The ruin stays where it was, and keeps blocking.
 func _fall() -> void:
 	pass
@@ -129,6 +208,9 @@ func _fall() -> void:
 func _process(delta: float) -> void:
 	if flash > 0.0:
 		flash = maxf(0.0, flash - delta)
+		queue_redraw()
+	if _dust < DUST_TIME:
+		_dust += delta
 		queue_redraw()
 
 func _draw() -> void:
@@ -171,6 +253,12 @@ func _draw_site() -> void:
 		draw_line(Vector2(-w - 6.0, level), Vector2(w + 6.0, level), SCAFFOLD, 2.5)
 		level -= 26.0
 	draw_line(Vector2(-w - 3.0, d), Vector2(w + 3.0, d - tall), SCAFFOLD_DARK, 1.5)
+	# a puff of dust off the last blow
+	if _dust < DUST_TIME:
+		var rise := _dust / DUST_TIME
+		for i in 4:
+			var x := lerpf(-w * 0.8, w * 0.8, float(i) / 3.0) + sin(float(i) * 2.3) * 6.0
+			draw_circle(Vector2(x, d - up - 4.0 - rise * 14.0), 4.0 + rise * 6.0, Color(0.72, 0.64, 0.52, 0.5 * (1.0 - rise)))
 	var at := Vector2(-bar_width * 0.5, -bar_height - 10.0)
 	draw_rect(Rect2(at, Vector2(bar_width, 5.0)), BAR_BACK)
 	draw_rect(Rect2(at + Vector2(1.0, 1.0), Vector2((bar_width - 2.0) * built, 3.0)), BUILD_BAR)
@@ -183,7 +271,7 @@ func _draw_ruin() -> void:
 		draw_circle(Vector2(x, -r * 0.4 + float((i * 3) % 4) - 2.0), r, RUBBLE if i % 2 == 0 else RUBBLE_DARK)
 
 func _draw_health() -> void:
-	if health >= health_max:
+	if health >= health_max or Pen.bare:
 		return
 	var at := Vector2(-bar_width * 0.5, -bar_height - 10.0)
 	draw_rect(Rect2(at, Vector2(bar_width, 5.0)), BAR_BACK)

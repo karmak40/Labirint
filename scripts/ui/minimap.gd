@@ -21,7 +21,7 @@ var refresh_left := 0.0
 func _init() -> void:
 	custom_minimum_size = Vector2(300.0, 56.0)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	tooltip_text = "Карта: нажмите, чтобы перейти"
+	tooltip_text = tr("Карта: нажмите, чтобы перейти")
 
 func _process(delta: float) -> void:
 	refresh_left -= delta
@@ -58,9 +58,13 @@ func _draw() -> void:
 		draw_rect(Rect2(spot * s - Vector2(1.5, 1.5), Vector2(3.0, 3.0)), ORE)
 	for spot in field.map.gold_positions:
 		draw_rect(Rect2(spot * s - Vector2(1.5, 1.5), Vector2(3.0, 3.0)), GOLD)
+	# the fog over it, the same as over the field
+	var fog := FogOfWar.current
+	if fog != null:
+		draw_texture_rect(fog._texture, Rect2(Vector2.ZERO, Vector2(fog.size_cells) * FogOfWar.CELL * s), false)
 	for node in get_tree().get_nodes_in_group("buildings"):
 		var building := node as Building
-		if building == null or not building.is_alive():
+		if building == null or not building.is_alive() or not FogOfWar.shows(building):
 			continue
 		var tint := Team.color(building.team)
 		if not building.is_complete():
@@ -70,7 +74,7 @@ func _draw() -> void:
 		draw_rect(Rect2(building.global_position * s - half, half * 2.0), Color(0, 0, 0, 0.6), false, 1.0)
 	for node in get_tree().get_nodes_in_group("targets"):
 		var body := node as PlayerBody
-		if body == null or not body.is_alive() or body.team == Team.Id.NEUTRAL:
+		if body == null or not body.is_alive() or body.team == Team.Id.NEUTRAL or not FogOfWar.shows(body):
 			continue
 		var tint := Team.color(body.team).lightened(0.25 if body is Worker else 0.0)
 		draw_rect(Rect2(body.global_position * s - Vector2(1.0, 1.0), Vector2(2.0, 2.0) if body is Worker else Vector2(3.0, 3.0)), tint)

@@ -2569,6 +2569,8 @@ func _draw() -> void:
 	_w_circle(head, HEAD_RADIUS, near_color)
 	if player.helm != PlayerBody.Helm.NONE:
 		_stroke_helm(helm_at, near_color)
+	elif player.hooded:
+		_stroke_hood()
 
 	# the shield is carried in front of the chest, so it covers the torso but
 	# stays behind the weapon arm; it is strapped on and never dropped
@@ -2728,6 +2730,44 @@ func _stroke_helm(at: Vector2, near_color: Color) -> void:
 	_w_line(at + lean * HELM_TALL * 0.45, at + lean * (HELM_TALL * 0.45 + 7.0),
 		PLUME_COLOR, 3.0, smooth_lines)
 
+## A cowl pulled forward over the head, its point hanging down the back, the
+## face lost in its shadow, and a short mantle over the shoulders.
+const HOOD := Color(0.38, 0.31, 0.22)
+const HOOD_EDGE := Color(0.22, 0.17, 0.11)
+const HOOD_SHADOW := Color(0.09, 0.07, 0.06)
+
+func _stroke_hood() -> void:
+	var lean := helm_lean
+	var ahead := Vector2(-lean.y, lean.x)
+	var r := HEAD_RADIUS
+	var h := head
+	# the mantle first, so the cowl sits over it
+	var mantle := PackedVector2Array([
+		shoulder - ahead * 9.0 + lean * 3.0,
+		shoulder + ahead * 7.0 + lean * 3.0,
+		shoulder + ahead * 5.0 - lean * 11.0,
+		shoulder - ahead * 10.0 - lean * 14.0,
+	])
+	_w_polygon(mantle, HOOD)
+	var cowl := PackedVector2Array([
+		h - ahead * r * 0.9 - lean * r * 1.25,
+		h - ahead * r * 1.25 + lean * r * 0.2,
+		h - ahead * r * 1.1 + lean * r * 1.05,
+		h - ahead * r * 0.2 + lean * r * 1.35,
+		h + ahead * r * 0.75 + lean * r * 0.95,
+		h + ahead * r * 1.2 + lean * r * 0.1,
+		h + ahead * r * 0.8 - lean * r * 1.05,
+	])
+	_w_polygon(cowl, HOOD)
+	var rim := cowl.duplicate()
+	rim.append(cowl[0])
+	_w_polyline(rim, HOOD_EDGE, 1.2, smooth_lines)
+	# the point of the hood, fallen back
+	_w_polygon(PackedVector2Array([h - ahead * r * 1.1 + lean * r * 1.05, h - ahead * r * 0.2 + lean * r * 1.35,
+		h - ahead * r * 2.0 + lean * r * 0.2]), HOOD)
+	# and nothing to be seen of the face
+	_w_circle(h + ahead * r * 0.35 - lean * r * 0.05, r * 0.62, HOOD_SHADOW)
+
 ## A plate over the near shoulder, drawn after the arm so it caps the joint.
 func _stroke_pauldron(near_color: Color) -> void:
 	_w_circle(shoulder, PAULDRON, near_color)
@@ -2788,7 +2828,7 @@ func _stroke_pickaxe(grip: Vector2, dir: Vector2) -> void:
 ## Drawn outside the figure's mirrored frame on purpose: a bar that flips with
 ## the body fills from the wrong end when it turns round.
 func _draw_wind() -> void:
-	if player.is_dead:
+	if player.is_dead or Pen.bare:
 		return
 
 	var wind := clampf(player.stamina / PlayerBody.STAMINA_MAX, 0.0, 1.0)

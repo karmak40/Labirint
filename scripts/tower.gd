@@ -55,7 +55,7 @@ func _physics_process(delta: float) -> void:
 ## People only: a tower does not waste bolts on walls.
 func _nearest_foe() -> Node2D:
 	var best: Node2D = null
-	var best_distance := RANGE
+	var best_distance := RANGE * Weather.tower_sight()
 	for node in get_tree().get_nodes_in_group("targets"):
 		var body := node as PlayerBody
 		if body == null or not body.is_alive() or not Team.hostile(team, body.team):
@@ -68,7 +68,7 @@ func _nearest_foe() -> Node2D:
 
 func _still_in_sight(thing: Node2D) -> bool:
 	return thing != null and is_instance_valid(thing) and thing.is_alive() \
-		and global_position.distance_to(thing.global_position) <= RANGE
+		and global_position.distance_to(thing.global_position) <= RANGE * Weather.tower_sight()
 
 func _fly(delta: float) -> void:
 	if bolts.is_empty():

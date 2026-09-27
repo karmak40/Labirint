@@ -4,9 +4,9 @@ extends "res://tests/lib/test_case.gd"
 ## soldier who lacks it, or into the store for the next one hired; a shield
 ## only goes to a one-handed weapon; and the kit really does keep blows off --
 ## a helm, plate, and a shield only from the front. Nothing is made without a
-## smith: a labourer put to an anvil walks there and hammers, every blow moves
-## the work along, two anvils take two smiths, and each goes back to its trade
-## when released.
+## smith, and smiths come by themselves: with work waiting, a labourer goes to
+## each anvil (never the last one on the trades), every blow moves the work
+## along, and once the work is done each goes back to his trade.
 
 var stage := 0
 var smithy: Forge
@@ -14,6 +14,8 @@ var bare: Unit
 var spear: Unit
 var hand: Worker
 var hand2: Worker
+var hand3: Worker
+var done_at := -1
 var first_helm_at := -1.0
 var blows_at_start := 0
 
@@ -59,9 +61,9 @@ func step() -> bool:
 			spear = _soldier("spearman", Vector2(700, 330))
 			me.squad.add(bare)
 			me.squad.add(spear)
-			check(not gs.assign_smith(1), "no smith without a forge")
 			hand = _hand(Vector2(420, 330))
 			hand2 = _hand(Vector2(440, 360))
+			hand3 = _hand(Vector2(300, 420))
 			stage = 1
 		1:
 			if not smithy.is_complete():
@@ -78,16 +80,18 @@ func step() -> bool:
 			stage = 2
 			frame = 0
 		2:
-			if frame == 60 * 4:
-				check(smithy.on_anvil == ["", ""] and smithy.queue.size() == 4, "without a smith nothing gets made", smithy.on_anvil)
-				check(gs.assign_smith(1), "a labourer is put to an anvil")
-				check(me.smiths().size() == 1 and me.smith().weapon == PlayerBody.Weapon.HAMMER, "and takes up the hammer")
-				check(gs.assign_smith(1), "a second is put to the other anvil")
-				check(hand.is_smith() and hand2.is_smith() and hand.anvil != hand2.anvil, "one to each anvil", [hand.anvil, hand2.anvil])
-				check(not gs.assign_smith(1), "two smiths to a forge")
+			if frame == 60:
+				var at := me.smiths()
+				check(at.size() == 2, "with work waiting, two labourers go to the anvils by themselves", at.size())
+				check(at.size() == 2 and at[0].anvil != at[1].anvil, "one to each anvil")
+				check(at.size() > 0 and at[0].weapon == PlayerBody.Weapon.HAMMER, "and take up the hammer")
+				check(int(me.hands()["wood"]) == 1, "the last woodcutter is left to his trade", me.hands())
 			if frame > 60 * 4 and first_helm_at < 0.0 and bare.helm == PlayerBody.Helm.WORN:
 				first_helm_at = seconds()
-				check(hand.at_anvil() or hand2.at_anvil(), "it was beaten out at an anvil")
+				var at_anvil := false
+				for smith in me.smiths():
+					at_anvil = at_anvil or smith.at_anvil()
+				check(at_anvil, "it was beaten out at an anvil")
 				check(int(me.gear["helm"]) == 0, "the first helm went straight onto the warrior", me.gear)
 			if smithy.all_pending().is_empty() and frame > 60 * 4:
 				check(first_helm_at > 0.0, "the helm was made", "at %.1f s" % first_helm_at)
@@ -113,8 +117,16 @@ func step() -> bool:
 				var recruit: Unit = me.squad.alive()[me.squad.alive().size() - 1]
 				check(recruit.helm == PlayerBody.Helm.WORN, "a new recruit took the helm from the store")
 				check(int(me.gear["helm"]) == 0, "and the store is empty", me.gear)
-				check(gs.release_smith(1) and gs.release_smith(1) and hand.job == "wood" and hand.weapon == PlayerBody.Weapon.AXE,
-					"released, the smiths go back to felling", hand.job)
-				check(me.smiths().is_empty(), "and nobody is left at the anvils")
+				stage = 4
+				frame = 0
+		4:
+			# the work is done: after a few idle seconds the smiths go back
+			if frame == int(60 * (PlayerState.SMITH_LINGER + 1.5)):
+				check(me.smiths().is_empty(), "with nothing to make, nobody stays at the anvils", me.smiths().size())
+				var axes := 0
+				for worker in [hand, hand2, hand3]:
+					if worker.job == "wood" and worker.weapon == PlayerBody.Weapon.AXE:
+						axes += 1
+				check(axes == 3, "the smiths went back to felling", axes)
 				return true
 	return false

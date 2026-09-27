@@ -83,6 +83,8 @@ func team_name(team: int) -> String:
 			return "синие"
 		Team.Id.ENEMY:
 			return "красные"
+		Team.Id.BANDITS:
+			return "разбойники"
 	return "никто"
 
 ## Called by MapBuilder once everything is standing.
@@ -190,6 +192,18 @@ static func footprint_of(kind: String) -> Vector2:
 			probe.free()
 	return _footprints[kind]
 
+## The open ground in front of a `kind` standing at `point`, or an empty Rect2.
+static var _aprons := {}
+
+static func apron_of(kind: String, point: Vector2) -> Rect2:
+	if not _aprons.has(kind):
+		var probe := _make(kind)
+		_aprons[kind] = probe.apron_at(Vector2.ZERO) if probe != null else Rect2()
+		if probe != null:
+			probe.free()
+	var front: Rect2 = _aprons[kind]
+	return Rect2(front.position + point, front.size) if front.has_area() else front
+
 ## Why `kind` can not go up at `point` for `team`, or "" if it can.
 func build_problem(team: int, kind: String, point: Vector2) -> String:
 	var state := side(team)
@@ -222,6 +236,17 @@ func build_problem(team: int, kind: String, point: Vector2) -> String:
 		if other != null and Rect2(other.global_position - other.footprint * 0.5, other.footprint) \
 				.grow(CLEARANCE).intersects(area):
 			return "Мешает другая постройка"
+	# the ground in front of a door or an anvil stays open, ours and anyone's --
+	# and so does the new one's
+	var front := apron_of(kind, point)
+	for node in get_tree().get_nodes_in_group("buildings"):
+		var other := node as Building
+		if other == null or not other.is_alive():
+			continue
+		if other.apron().intersects(area):
+			return "Загородит вход"
+		if front.has_area() and Rect2(other.global_position - other.footprint * 0.5, other.footprint).intersects(front):
+			return "Перед входом нет места"
 	for node in get_tree().get_nodes_in_group("trees"):
 		if _gap(area, (node as Node2D).global_position) < 28.0:
 			return "Мешают деревья"
@@ -266,9 +291,12 @@ func build(team: int, kind: String, point: Vector2) -> bool:
 	building.team = team
 	building.position = point
 	building.start_construction(float(entry["time"]))
+	# in a match it rises only under a labourer's hammer
+	building.needs_builder = true
 	var ground := field()
 	ground.add_child(building)
 	state.adopt(building)
+	state.send_builder(building)
 	# the way round it is worked out again, off the main thread
 	var nav := ground.get_node_or_null("NavFloor") as NavFloor
 	if nav != null:
@@ -287,14 +315,15 @@ func forge(team: int, item: String) -> bool:
 	var state := side(team)
 	return is_playing() and state != null and state.order_gear(item)
 
-## Put a labourer to a free anvil, or send a smith back to its trade.
-func assign_smith(team: int) -> bool:
+## Put a labourer to mending our buildings, or send one back to its trade.
+func assign_repairer(team: int) -> bool:
 	var state := side(team)
-	return is_playing() and state != null and state.assign_smith()
+	return is_playing() and state != null and state.assign_repairer()
 
-func release_smith(team: int) -> bool:
+func release_repairer(team: int) -> bool:
 	var state := side(team)
-	return is_playing() and state != null and state.release_smith()
+	return is_playing() and state != null and state.release_repairer()
+
 
 ## Send the army at a point, fighting whatever it meets on the way.
 func attack_move(team: int, point: Vector2) -> void:

@@ -6,6 +6,7 @@ extends "res://tests/lib/test_case.gd"
 ## and a burned library losing the study that was under way in it.
 
 var stage := 0
+var hands: Array[Worker] = []
 var library: Library
 var tower: Tower
 var soldier: Unit
@@ -48,8 +49,37 @@ func step() -> bool:
 			stage = 1
 			frame = 0
 		1:
+			# nobody to build: the sites wait
+			if frame < 120:
+				return false
+			check(library.built < 0.01 and tower.built < 0.01, "with no labourers nothing goes up", library.built)
+			for i in 2:
+				var hand: Worker = load("res://scenes/worker/Worker.tscn").instantiate()
+				hand.team = Team.Id.PLAYER
+				hand.job = "ore"
+				hand.position = me.base().door_point() + Vector2(40 * i, 40)
+				current_scene.add_child(hand)
+				hands.append(hand)
+			stage = 5
+			frame = 0
+		5:
+			if frame == 60:
+				check(hands[0].job == "build" and hands[1].job == "build" and hands[0].site != hands[1].site,
+					"a labourer goes to each site", [hands[0].job, hands[1].job])
+				check(hands[0].weapon == PlayerBody.Weapon.HAMMER, "hammer in hand")
+			if frame == 60 * 6:
+				check(library.built > 0.05 and library.built < 1.0, "and it rises under the hammer", library.built)
 			if library.is_complete() and tower.is_complete():
-				check(absf(seconds() - float(gs.BUILDINGS["library"]["time"])) < 1.5, "the library took as long as it should", "%.1f s" % seconds())
+				var took := frame / 60.0
+				check(took > float(gs.BUILDINGS["library"]["time"]) * 0.8 and took < float(gs.BUILDINGS["library"]["time"]) + 20.0,
+					"the library took about as long as it should, with the walk", "%.1f s" % took)
+				stage = 6
+				frame = 0
+		6:
+			if frame < 30:
+				return false
+			check(hands[0].job == "ore" and hands[1].job == "ore", "done, the builders go back to their ore", [hands[0].job, hands[1].job])
+			if true:
 				check(library.health > library.health_max * 0.95, "and grew to full strength as it went up", int(library.health))
 				soldier = me.squad.alive()[0] if not me.squad.alive().is_empty() else null
 				check(soldier != null, "the warrior is in the ranks")

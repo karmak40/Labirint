@@ -12,6 +12,10 @@ const CASTLE := Color(0.12, 0.12, 0.15)
 const WINDOW := Color(0.98, 0.78, 0.40)
 
 var list_panel: Control
+## Everything but the backdrop: fitted inside the screen's safe area and drawn
+## bigger on a phone (UiStyle.fit), as big as the tallest panel allows.
+var stage: Control
+var main_panel: Control
 
 ## The picture behind the menu, scaled to whatever the window is.
 class Backdrop:
@@ -53,45 +57,54 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	theme = UiStyle.theme()
 	add_child(Backdrop.new())
+	stage = Control.new()
+	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stage.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(stage)
+	var compact := UiStyle.compact()
 
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	stage.add_child(center)
 	var panel := PanelContainer.new()
+	main_panel = panel
 	var style := UiStyle.panel()
 	style.set_content_margin_all(26.0)
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
+	column.add_theme_constant_override("separation", 7 if compact else 10)
 	panel.add_child(column)
 
 	var title := Label.new()
 	title.text = "Labirint"
-	title.add_theme_font_size_override("font_size", 52)
+	title.add_theme_font_size_override("font_size", 40 if compact else 52)
 	title.add_theme_color_override("font_color", UiStyle.GOLD_BRIGHT)
 	title.add_theme_constant_override("outline_size", 6)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(title)
 	var subtitle := Label.new()
-	subtitle.text = "база на базу"
+	subtitle.text = tr("база на базу")
 	subtitle.add_theme_font_size_override("font_size", 17)
 	subtitle.add_theme_color_override("font_color", UiStyle.DIM)
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(subtitle)
 	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0.0, 10.0)
+	gap.custom_minimum_size = Vector2(0.0, 2.0 if compact else 10.0)
 	column.add_child(gap)
 
-	var start := _button(column, "Кампания", _show_campaign)
-	_button(column, "Схватка", _show_skirmish_setup)
-	_button(column, "ИИ против ИИ", func() -> void:
+	var start := _button(column, tr("Кампания"), _show_campaign)
+	_button(column, tr("Схватка"), _show_skirmish_setup)
+	_button(column, tr("ИИ против ИИ"), func() -> void:
 		Campaign.leave()
 		GameState.start_match(GameState.DEFAULT_MAP, true))
-	_button(column, "Достижения", _show_achievements)
-	_button(column, "Тестовый стенд", GameState.open_testbed)
-	_button(column, "Выход", func() -> void: get_tree().quit())
+	_button(column, tr("Достижения"), _show_achievements)
+	_button(column, "%s: %s" % [tr("Язык"), Lang.name_of(Lang.current())], _show_languages)
+	_button(column, tr("Тестовый стенд"), GameState.open_testbed)
+	_button(column, tr("Выход"), func() -> void: get_tree().quit())
 	start.grab_focus()
+	get_viewport().size_changed.connect(_fit)
+	_fit.call_deferred()
 	# back from a campaign room: straight to the list of rooms
 	if Campaign.current >= 0:
 		Campaign.leave()
@@ -99,30 +112,53 @@ func _ready() -> void:
 
 var campaign_panel: Control
 
+## As big as UiStyle wants, but the main panel must fit the screen's height.
+func _fit() -> void:
+	var margins := UiStyle.safe_margins(get_viewport())
+	var room := get_viewport().get_visible_rect().size - margins.position - margins.size
+	var needed := main_panel.get_combined_minimum_size() + Vector2(24.0, 24.0)
+	UiStyle.fit(stage, clampf(minf(UiStyle.wanted_scale(), minf(room.y / needed.y, room.x / needed.x)), 0.6, 3.0))
+
+## The phone's back button (quit_on_go_back is off): closes the top panel, and
+## on the bare menu leaves the game.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
+		return
+	for i in range(stage.get_child_count() - 1, -1, -1):
+		var panel := stage.get_child(i) as ColorRect
+		if panel == null or not panel.visible or panel.is_queued_for_deletion():
+			continue
+		if panel == campaign_panel or panel == list_panel:
+			panel.visible = false
+		else:
+			panel.queue_free()
+		return
+	get_tree().quit()
+
 ## Before a skirmish: how hard the enemy is and how it plays.
 func _show_skirmish_setup() -> void:
 	var panel := _overlay()
-	var column := _overlay_column(panel, "Схватка")
+	var column := _overlay_column(panel, tr("Схватка"))
 	_difficulty_row(column)
-	var strategies := [["random", "Случайная", "Стратегия выбирается в начале боя и не раскрывается до конца."]]
+	var strategies := [["random", tr("Случайная"), tr("Стратегия выбирается в начале боя и не раскрывается до конца.")]]
 	for id in AIProfile.STRATEGIES:
-		strategies.append([id, AIProfile.STRATEGIES[id]["title"], AIProfile.STRATEGIES[id]["about"]])
-	_choice_row(column, "Противник", strategies, GameState.ai_strategy,
+		strategies.append([id, tr(AIProfile.STRATEGIES[id]["title"]), tr(AIProfile.STRATEGIES[id]["about"])])
+	_choice_row(column, tr("Противник"), strategies, GameState.ai_strategy,
 		func(id: String) -> void: GameState.ai_strategy = id)
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", 12)
 	column.add_child(buttons)
-	_button(buttons, "Начать", func() -> void:
+	_button(buttons, tr("Начать"), func() -> void:
 		Campaign.leave()
 		GameState.start_match())
-	_button(buttons, "Назад", func() -> void: panel.queue_free())
+	_button(buttons, tr("Назад"), func() -> void: panel.queue_free())
 
 func _difficulty_row(column: Control) -> void:
 	var levels := []
 	for id in AIProfile.DIFFICULTIES:
-		levels.append([id, AIProfile.DIFFICULTIES[id]["title"], AIProfile.DIFFICULTIES[id]["about"]])
-	_choice_row(column, "Сложность", levels, GameState.ai_difficulty,
+		levels.append([id, tr(AIProfile.DIFFICULTIES[id]["title"]), tr(AIProfile.DIFFICULTIES[id]["about"])])
+	_choice_row(column, tr("Сложность"), levels, GameState.ai_difficulty,
 		func(id: String) -> void: GameState.ai_difficulty = id)
 
 ## A labelled row of buttons of which one is picked; `pick` is told the id.
@@ -167,7 +203,7 @@ func _show_campaign() -> void:
 	if campaign_panel != null:
 		campaign_panel.queue_free()
 	campaign_panel = _overlay()
-	var column := _overlay_column(campaign_panel, "Кампания")
+	var column := _overlay_column(campaign_panel, tr("Кампания"))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	column.add_child(row)
@@ -178,22 +214,22 @@ func _show_campaign() -> void:
 		card.focus_mode = Control.FOCUS_NONE
 		var open: bool = Campaign.is_open(i)
 		var earned: int = Campaign.stars_of(i)
-		card.text = "Комната %d\n%s\n%s" % [i + 1, room["title"], ("★".repeat(earned) + "☆".repeat(3 - earned)) if open else "закрыта"]
+		card.text = "%s\n%s\n%s" % [tr("Комната %d") % (i + 1), tr(room["title"]),("★".repeat(earned) + "☆".repeat(3 - earned)) if open else tr("закрыта")]
 		card.add_theme_font_size_override("font_size", 16)
 		card.disabled = not open
-		card.tooltip_text = room["goal"] if open else "Сначала пройдите комнату %d" % i
+		card.tooltip_text = tr(room["goal"]) if open else tr("Сначала пройдите комнату %d") % i
 		card.pressed.connect(_show_briefing.bind(i))
 		row.add_child(card)
-	var back := _button(column, "Назад", func() -> void: campaign_panel.visible = false)
+	var back := _button(column, tr("Назад"), func() -> void: campaign_panel.visible = false)
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 ## What a room is about, what it asks, and what earns its stars; then into it.
 func _show_briefing(index: int) -> void:
 	var room: Dictionary = Campaign.ROOMS[index]
 	var panel := _overlay()
-	var column := _overlay_column(panel, "Комната %d · %s" % [index + 1, room["title"]])
-	for line in [[room["brief"], UiStyle.TEXT, 15], ["Цель: " + room["goal"], UiStyle.GOLD_BRIGHT, 15],
-			["★ победа   ★ быстрее %d мин   ★ крепость цела хотя бы на %d%%" % [int(room["fast"] / 60.0), int(room["castle"] * 100.0)], UiStyle.DIM, 13]]:
+	var column := _overlay_column(panel, "%s · %s" % [tr("Комната %d") % (index + 1), tr(room["title"])])
+	for line in [[tr(room["brief"]), UiStyle.TEXT, 15], [tr("Цель: %s") % tr(room["goal"]), UiStyle.GOLD_BRIGHT, 15],
+			[tr("★ победа   ★ быстрее %d мин   ★ крепость цела хотя бы на %d%%") % [int(room["fast"] / 60.0), int(room["castle"] * 100.0)], UiStyle.DIM, 13]]:
 		var label := Label.new()
 		label.text = line[0]
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -202,7 +238,7 @@ func _show_briefing(index: int) -> void:
 		label.add_theme_font_size_override("font_size", line[2])
 		column.add_child(label)
 	var enemy := Label.new()
-	enemy.text = "Противник играет: %s" % AIProfile.title(room.get("ai", "balanced"))
+	enemy.text = tr("Противник играет: %s") % tr(AIProfile.title(room.get("ai", "balanced")))
 	enemy.add_theme_color_override("font_color", UiStyle.DIM)
 	enemy.add_theme_font_size_override("font_size", 13)
 	column.add_child(enemy)
@@ -211,14 +247,26 @@ func _show_briefing(index: int) -> void:
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", 12)
 	column.add_child(buttons)
-	_button(buttons, "В бой", func() -> void: Campaign.start(index))
-	_button(buttons, "Назад", func() -> void: panel.queue_free())
+	_button(buttons, tr("В бой"), func() -> void: Campaign.start(index))
+	_button(buttons, tr("Назад"), func() -> void: panel.queue_free())
+
+## Every language there is; picking one speaks it from now on and builds the
+## menu again in it.
+func _show_languages() -> void:
+	var panel := _overlay()
+	var column := _overlay_column(panel, tr("Язык"))
+	for code in Lang.codes:
+		var button := _button(column, Lang.name_of(code), func() -> void:
+			Lang.choose(code)
+			get_tree().reload_current_scene())
+		button.disabled = code == Lang.current()
+	_button(column, tr("Назад"), func() -> void: panel.queue_free())
 
 func _overlay() -> Control:
 	var shade := ColorRect.new()
 	shade.color = Color(0.0, 0.0, 0.0, 0.55)
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(shade)
+	stage.add_child(shade)
 	return shade
 
 func _overlay_column(shade: Control, heading: String) -> VBoxContainer:
@@ -248,7 +296,7 @@ func _show_achievements() -> void:
 	list_panel = ColorRect.new()
 	(list_panel as ColorRect).color = Color(0.0, 0.0, 0.0, 0.55)
 	list_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(list_panel)
+	stage.add_child(list_panel)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	list_panel.add_child(center)
@@ -264,7 +312,7 @@ func _show_achievements() -> void:
 	for id in achievements.LIST:
 		got += 1 if achievements.is_unlocked(id) else 0
 	var head := Label.new()
-	head.text = "Достижения   %d / %d" % [got, achievements.LIST.size()]
+	head.text = tr("Достижения") + "   %d / %d" % [got, achievements.LIST.size()]
 	head.add_theme_font_size_override("font_size", 24)
 	head.add_theme_color_override("font_color", UiStyle.GOLD_BRIGHT)
 	column.add_child(head)
@@ -272,11 +320,11 @@ func _show_achievements() -> void:
 		var entry: Array = achievements.LIST[id]
 		var earned: bool = achievements.is_unlocked(id)
 		var line := Label.new()
-		line.text = "%s  %s — %s" % ["★" if earned else "☆", entry[0], entry[1]]
+		line.text = "%s  %s — %s" % ["★" if earned else "☆", tr(entry[0]), tr(entry[1])]
 		line.add_theme_font_size_override("font_size", 15)
 		line.add_theme_color_override("font_color", UiStyle.GOLD_BRIGHT if earned else UiStyle.DIM)
 		column.add_child(line)
-	var back := _button(column, "Назад", func() -> void: list_panel.visible = false)
+	var back := _button(column, tr("Назад"), func() -> void: list_panel.visible = false)
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 func _button(parent: Control, text: String, action: Callable) -> Button:

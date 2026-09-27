@@ -15,8 +15,14 @@ extends Node
 ## hands on each trade, save up for the library and the next study, put up
 ## towers, build soldiers to the mix it likes, go when the wave is big enough
 ## (and the plan says it is time), fall back when it is spent and make the next
-## one bigger, and turn out to meet anyone who comes too close to home. Its
-## only randomness is in when it thinks, and in which strategy "random" picks.
+## one bigger, and turn out to meet anyone who comes too close to home.
+##
+## No two matches against it go quite the same (`_vary`): each head rolls its
+## own habits once, when it starts -- where round its castle it likes to put
+## each kind of building, the order it takes its studies in (prerequisites
+## kept), how much it favours each kind of soldier, which trade it leans on,
+## how big its first wave is and when it first means to go, the order it wants
+## kit in. Within a match it keeps to them, so it still plays like itself.
 
 const THINK_JITTER := 0.4
 const TRADE_KIND := {"wood": "woodcutter", "ore": "miner", "gold": "gold_miner"}
@@ -36,6 +42,13 @@ var wave_size := 4
 var wave: Array[Unit] = []     ## the soldiers sent in the current attack
 var attacking := false
 var defending := false
+## The delays its difficulty puts on it (AIProfile): when it first saw someone
+## at its walls, when its wave was first ready, when the wave was first spent,
+## and when its last study finished. -1 for not now.
+var intruder_since := -1.0
+var ready_since := -1.0
+var spent_since := -1.0
+var studied_at := -INF
 
 func _ready() -> void:
 	var side := get_parent() as PlayerState
@@ -44,6 +57,8 @@ func _ready() -> void:
 	plan = AIProfile.make(strategy, difficulty)
 	strategy = plan["strategy"]
 	difficulty = plan["difficulty"]
+	rng.randomize()
+	_vary()
 	wave_size = int(plan["first_wave"])
 	think_left = randf() * float(plan["think"])
 	game = get_node_or_null("/root/GameState")
@@ -63,9 +78,13 @@ func _think() -> void:
 	_put_up(me)
 	# learning comes before hiring: it is the one thing it cannot catch up on later
 	var study := _next_study(me)
-	if study != "" and not _saving_for_forge(me):
+	if me.researching != "":
+		studied_at = game.match_time
+	# a pause after each study, the longer the easier the head
+	if study != "" and not _saving_for_forge(me) and game.match_time - studied_at >= float(plan.get("study_pause", 0.0)):
 		game.research(team, study)
 	_rebalance(me)
+	_mend(me)
 	_hire(me)
 	_arm(me)
 	if _guard_home(me):
@@ -211,17 +230,13 @@ func _wants_towers(me: PlayerState) -> bool:
 		and (bool(plan["towers_early"]) or wave_size > int(plan["first_wave"]))
 	return time_for_towers and _towers(me) < int(plan["towers"])
 
-## Smiths at the anvils, then kit for the ranks in the order its plan likes,
+## Kit for the ranks in the order its plan likes,
 ## one piece a thought -- only what somebody could wear, and never out of a
 ## price being put by, nor out of towers still to be put up -- and with the
 ## forge idle and the store full, a few weapons made ahead for the next wave.
 func _arm(me: PlayerState) -> void:
+	# smiths come to the anvils by themselves when there is work (PlayerState)
 	var smithy := me.forge()
-	# nothing is made without a hand at an anvil; a forge has two, and the
-	# trades they come from are hired back up in the ordinary way
-	while smithy != null and not me.free_anvil().is_empty() and me.workers().size() - me.smiths().size() > _first_hands():
-		if not game.assign_smith(team):
-			break
 	if smithy == null or smithy.all_pending().size() >= 2 or _saving_for_library(me) or _saving_for_study(me) \
 			or _wants_towers(me):
 		return
@@ -251,6 +266,18 @@ func _coming(me: PlayerState) -> int:
 	var barracks := me.barracks()
 	return me.drafts.size() + (barracks.queue.size() if barracks != null else 0)
 
+## A hand goes round with a hammer while anything of ours is hurt, and back
+## to its trade once all is mended.
+const MEND_WOOD := 30          ## wood it keeps for mending before it bothers
+
+func _mend(me: PlayerState) -> void:
+	var at_it := me.repairers().size()
+	if me.anything_to_repair() and me.economy.wood >= MEND_WOOD:
+		if at_it == 0 and me.workers().size() > _first_hands():
+			game.assign_repairer(team)
+	elif at_it > 0:
+		game.release_repairer(team)
+
 ## Labourers are all alike, so a store piling up while the other runs dry
 ## is put right by moving a hand across, rather than by hiring another.
 const GLUT := 80               ## how far ahead one store has to be
@@ -278,17 +305,96 @@ func _towers(me: PlayerState) -> int:
 	return count
 
 ## Tries a handful of spots out towards the field, `ahead` from the castle.
+## Tries a handful of spots out towards the field, about `ahead` from the
+## castle, starting where this head likes that kind of building (`_vary`).
 func _build_near(me: PlayerState, kind: String, ahead: float) -> bool:
 	var keep := me.base()
 	if keep == null:
 		return false
 	var toward := 1.0 if keep.global_position.x < _field_middle() else -1.0
-	for dy in [0.0, -90.0, 90.0, -170.0, 170.0]:
-		for dx in [0.0, 60.0, -60.0, 120.0]:
-			var spot := keep.global_position + Vector2(toward * (ahead + dx), dy)
-			if game.build_problem(team, kind, spot) == "":
-				return game.build(team, kind, spot)
+	var habit: Vector2 = sites.get(kind, Vector2.ZERO)
+	# the rows nearest the one it likes first, then out from there
+	var rows := [-170.0, -90.0, 0.0, 90.0, 170.0]
+	rows.sort_custom(func(a: float, b: float) -> bool: return absf(a - habit.y) < absf(b - habit.y))
+	# and if nothing near will do (a forge wants room for its anvils), further out
+	for further in [0.0, 150.0, 300.0]:
+		for dy in rows:
+			for dx in [0.0, 60.0, -60.0, 120.0, -120.0]:
+				var spot := keep.global_position + Vector2(toward * (ahead + further + habit.x + dx), dy)
+				if _in_the_way(kind, spot):
+					continue
+				if game.build_problem(team, kind, spot) == "":
+					return game.build(team, kind, spot)
 	return false
+
+## Nothing goes up close by its own stockpile: every load of wood and ore is
+## carried in there, and a building on the way jams the carriers at its corner.
+const STOCK_CLEAR := 150.0
+
+func _in_the_way(kind: String, spot: Vector2) -> bool:
+	var half: Vector2 = game.footprint_of(kind) * 0.5
+	var area := Rect2(spot - half, half * 2.0)
+	for node in get_tree().get_nodes_in_group("stockpiles"):
+		var pile := node as Stockpile
+		if pile != null and pile.team == team and game._gap(area, pile.global_position) < STOCK_CLEAR:
+			return true
+	return false
+
+# --- its own habits -----------------------------------------------------------
+
+var rng := RandomNumberGenerator.new()
+## Where it likes each kind of building: x further out (+) or nearer in, and
+## the row (y) it tries first.
+var sites := {}
+
+## Rolls this head's habits for the match, within what its strategy allows.
+func _vary() -> void:
+	for kind in ["barracks", "library", "forge", "tower"]:
+		sites[kind] = Vector2(rng.randf_range(-50.0, 90.0), [-170.0, -90.0, 0.0, 90.0, 170.0][rng.randi() % 5])
+	# studies: a few neighbours swapped, never one before what it needs, and
+	# never one that costs gold past one that does not -- a head that starts on
+	# a gold study stands waiting for gold and spends everything else on clubs
+	var studies: Array = (plan["studies"] as Array).duplicate()
+	for i in studies.size() - 1:
+		if _costs_gold(studies[i]) != _costs_gold(studies[i + 1]):
+			continue
+		if rng.randf() < 0.4:
+			var swapped := studies.duplicate()
+			var held = swapped[i]
+			swapped[i] = swapped[i + 1]
+			swapped[i + 1] = held
+			if _in_order(swapped):
+				studies = swapped
+	plan["studies"] = studies
+	# how much it favours each kind of soldier
+	for kind in plan["mix"]:
+		plan["mix"][kind] = float(plan["mix"][kind]) * rng.randf_range(0.6, 1.4)
+	# which trade it leans on
+	var lean: String = ["wood", "ore"][rng.randi() % 2]
+	plan["workers_full"][lean] = int(plan["workers_full"][lean]) + rng.randi_range(0, 1)
+	plan["first_wave"] = maxi(2, int(plan["first_wave"]) + rng.randi_range(-1, 1))
+	if float(plan["attack_after"]) > 0.0:
+		plan["attack_after"] = float(plan["attack_after"]) * rng.randf_range(0.85, 1.2)
+	if int(plan["towers"]) >= 2:
+		plan["towers"] = int(plan["towers"]) + rng.randi_range(-1, 1)
+	var gear: Array = (plan["gear"] as Array).duplicate()
+	for i in range(gear.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var held = gear[i]
+		gear[i] = gear[j]
+		gear[j] = held
+	plan["gear"] = gear
+
+static func _costs_gold(study: String) -> bool:
+	return PlayerState.RESEARCH[study]["cost"].has("gold")
+
+## Whether every study in `order` comes after the one it needs, if that is there.
+static func _in_order(order: Array) -> bool:
+	for i in order.size():
+		var needs: String = PlayerState.RESEARCH[order[i]].get("needs", "")
+		if needs != "" and order.has(needs) and order.find(needs) > i:
+			return false
+	return true
 
 func _field_middle() -> float:
 	var foe: PlayerState = game.enemy_of(team)
@@ -364,9 +470,15 @@ func _guard_home(me: PlayerState) -> bool:
 		return false
 	var intruder := _nearest_foe_to_keep(keep)
 	if intruder != null:
+		# it takes a moment to notice, and to call the men out
+		if intruder_since < 0.0:
+			intruder_since = game.match_time
+		if game.match_time - intruder_since < float(plan.get("react", 0.0)):
+			return false
 		defending = true
 		game.attack_move(team, intruder.global_position)
 		return true
+	intruder_since = -1.0
 	if defending:
 		defending = false
 		# they came and they are gone: strike back while they are weak, or stand down
@@ -388,10 +500,62 @@ func _may_attack(me: PlayerState) -> bool:
 			return false
 	return true
 
+## A bandit camp on our half of the field is cleared as soon as there are men
+## enough at home for it -- half as many again as it has bandits, and never
+## fewer than four -- for its chest and for the ground it guards.
+var raiding: BanditCamp = null
+const RAID_MIN := 4
+const RAID_SHARE := 1.5
+
+## True while the army is out after a camp.
+func _raid_camps(me: PlayerState) -> bool:
+	if raiding != null:
+		if not is_instance_valid(raiding) or not raiding.is_guarded():
+			raiding = null
+			game.rally_home(team)
+			return false
+		game.attack_move(team, raiding.global_position)
+		return true
+	var camp := _camp_to_clear(me)
+	if camp == null:
+		return false
+	var ready := _at_home(me).size()
+	if ready >= maxi(RAID_MIN, ceili(camp.alive() * RAID_SHARE)):
+		raiding = camp
+		game.attack_move(team, camp.global_position)
+		return true
+	return false
+
+## The nearest camp still guarded that lies nearer our keep than theirs.
+func _camp_to_clear(me: PlayerState) -> BanditCamp:
+	var keep := me.base()
+	var foe: PlayerState = game.enemy_of(team)
+	if keep == null:
+		return null
+	var best: BanditCamp = null
+	for node in get_tree().get_nodes_in_group("camps"):
+		var camp := node as BanditCamp
+		if camp == null or not camp.is_guarded():
+			continue
+		var ours := camp.global_position.distance_to(keep.global_position)
+		if foe != null and foe.base() != null and ours > camp.global_position.distance_to(foe.base().global_position):
+			continue
+		if best == null or ours < best.global_position.distance_to(keep.global_position):
+			best = camp
+	return best
+
 func _wage_war(me: PlayerState) -> void:
+	if not attacking and _raid_camps(me):
+		return
 	if attacking:
 		if _wave_left() <= int(plan["spent_at"]):
-			# spent: bring back whoever is left, and make the next one bigger
+			# spent -- though it takes a while to see it and sound the retreat
+			if spent_since < 0.0:
+				spent_since = game.match_time
+			if game.match_time - spent_since < float(plan.get("retreat", 0.0)):
+				return
+			spent_since = -1.0
+			# bring back whoever is left, and make the next one bigger
 			attacking = false
 			wave.clear()
 			wave_size = mini(wave_size + int(plan["wave_growth"]), int(plan["wave_max"]))
@@ -399,7 +563,14 @@ func _wage_war(me: PlayerState) -> void:
 		return
 	var ready := _at_home(me)
 	if ready.size() >= wave_size and _may_attack(me):
-		_launch(ready)
+		# a wave is mustered before it goes
+		if ready_since < 0.0:
+			ready_since = game.match_time
+		if game.match_time - ready_since >= float(plan.get("muster", 0.0)):
+			ready_since = -1.0
+			_launch(ready)
+	else:
+		ready_since = -1.0
 
 func _launch(soldiers: Array[Unit]) -> void:
 	attacking = true

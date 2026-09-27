@@ -10,10 +10,12 @@ var forge_at := -1.0
 var ordered := false
 
 func begin() -> void:
-	time_limit = 60 * 420
+	time_limit = 60 * 540
 	# the balanced head; the others build later on purpose (see test_ai_strategies)
 	game().ai_strategy = "balanced"
-	game().ai_difficulty = "normal"
+	# the hard head: no delays, so the whole chain fits in a short check (the
+	# normal one is slower on purpose and gets there too, only later)
+	game().ai_difficulty = "hard"
 	change_scene_to_file("res://scenes/main/Skirmish.tscn")
 
 func step() -> bool:

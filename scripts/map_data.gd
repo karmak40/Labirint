@@ -22,6 +22,14 @@ extends Resource
 @export var log_worth := 1
 @export var regrow_time := 0.0
 @export var refill_time := 0.0
+## Day and night and rain over the match (Weather), seeded from the title.
+@export var weather := true
+## Fog of war over the match for the human side (FogOfWar).
+@export var fog := true
+## Bandit camps (BanditCamp): where they stand, who guards each, what its chest holds.
+@export var camp_positions: Array[Vector2] = []
+@export var camp_bandits := PackedStringArray(["warrior", "warrior", "spearman", "archer"])
+@export var camp_bounty := {"wood": 40, "ore": 30, "gold": 20}
 @export var player: SideLayout
 @export var enemy: SideLayout
 

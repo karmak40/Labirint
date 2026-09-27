@@ -25,12 +25,15 @@ const FLAME := Color(1.0, 0.62, 0.18)
 const FLAME_CORE := Color(1.0, 0.92, 0.55)
 const MAGIC := Color(0.55, 0.80, 1.0)
 const MEND := Color(0.45, 0.95, 0.50)
+const SUN := Color(1.0, 0.85, 0.35)
+const MOON := Color(0.90, 0.92, 1.0)
+const CLOUD := Color(0.72, 0.76, 0.82)
 
 ## Arms from the forge are drawn as the soldier who carries them; a recruit
 ## as a labourer; the store of arms as a shield.
 const ALIAS := {"spear": "spearman", "bow": "archer", "crossbow": "crossbowman", "axe": "axeman",
 	"sword": "swordsman", "dagger": "scout", "torch": "torchbearer", "staff": "mage",
-	"recruit": "worker", "arms": "shield"}
+	"recruit": "worker", "arms": "shield", "repair": "build"}
 
 ## Draws `kind` into `box` on `c`.
 static func draw(c: CanvasItem, kind: String, box: Rect2) -> void:
@@ -220,9 +223,35 @@ static func draw(c: CanvasItem, kind: String, box: Rect2) -> void:
 		"attack":
 			_sword(c, p, s, 5.0, 27.0, 27.0, 5.0)
 			c.draw_colored_polygon(PackedVector2Array([p.call(20.0, 4.0), p.call(28.0, 4.0), p.call(28.0, 12.0)]), Color(0.95, 0.4, 0.3))
+		"day":
+			for k in 8:
+				var ray := Vector2.from_angle(k * PI / 4.0)
+				c.draw_line(p.call(16.0 + ray.x * 9.0, 16.0 + ray.y * 9.0), p.call(16.0 + ray.x * 13.0, 16.0 + ray.y * 13.0), SUN, 2.0 * s)
+			c.draw_circle(p.call(16.0, 16.0), 6.5 * s, SUN)
+		"dusk", "dawn":
+			c.draw_circle(p.call(16.0, 22.0), 8.0 * s, Color(1.0, 0.55, 0.25))
+			c.draw_rect(Rect2(p.call(4.0, 22.0), Vector2(24.0, 8.0) * s), Color(0.20, 0.16, 0.22))
+			c.draw_line(p.call(4.0, 22.0), p.call(28.0, 22.0), Color(1.0, 0.75, 0.45), 1.5 * s)
+		"night":
+			c.draw_circle(p.call(15.0, 16.0), 9.0 * s, MOON)
+			c.draw_circle(p.call(20.0, 13.0), 8.0 * s, Color(0.12, 0.13, 0.22))
+			c.draw_circle(p.call(26.0, 25.0), 1.2 * s, MOON)
+			c.draw_circle(p.call(7.0, 6.0), 1.0 * s, MOON)
+		"rain":
+			c.draw_circle(p.call(12.0, 12.0), 6.0 * s, CLOUD)
+			c.draw_circle(p.call(19.0, 10.0), 7.0 * s, CLOUD)
+			c.draw_rect(Rect2(p.call(7.0, 11.0), Vector2(19.0, 6.0) * s), CLOUD)
+			for k in 4:
+				var x := 9.0 + k * 5.0
+				c.draw_line(p.call(x, 21.0), p.call(x - 2.0, 28.0), MAGIC, 1.6 * s)
 		"rally":
 			c.draw_line(p.call(9.0, 29.0), p.call(9.0, 3.0), WOOD_DARK, 2.4 * s)
 			c.draw_colored_polygon(PackedVector2Array([p.call(10.0, 4.0), p.call(27.0, 9.0), p.call(10.0, 15.0)]), FLAG)
+		"rally_point":
+			# the flag planted on a spot marked on the ground
+			c.draw_arc(p.call(12.0, 27.0), 9.0 * s, 0.0, TAU, 20, Color(0.45, 0.70, 1.0), 1.8 * s, true)
+			c.draw_line(p.call(12.0, 27.0), p.call(12.0, 3.0), WOOD_DARK, 2.4 * s)
+			c.draw_colored_polygon(PackedVector2Array([p.call(13.0, 4.0), p.call(28.0, 8.5), p.call(13.0, 14.0)]), FLAG)
 		"lock":
 			c.draw_arc(p.call(16.0, 13.0), 6.0 * s, PI, TAU, 12, LOCK, 2.6 * s, true)
 			c.draw_rect(Rect2(p.call(8.0, 13.0), Vector2(16.0, 13.0) * s), LOCK)

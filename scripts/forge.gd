@@ -51,7 +51,11 @@ const ANVILS := [Vector2(-22.0, 34.0), Vector2(36.0, 34.0)]
 const SMITH_OFFSET := Vector2(-30.0, 2.0)
 const ANVIL_SIZE := 1.4
 ## Where recruits come for their arms, in front of the forge.
-const COLLECT := Vector2(0.0, 70.0)
+const COLLECT := Vector2(0.0, 100.0)   ## well clear of the smiths' spots
+## Where trophies brought in from the field are set down, off to one side,
+## and how near that a piece lying still is taken in.
+const TROPHY_DROP := Vector2(-62.0, 58.0)
+const TROPHY_RADIUS := 34.0
 
 const STONE := Color(0.46, 0.44, 0.42)
 const STONE_DARK := Color(0.34, 0.32, 0.31)
@@ -164,7 +168,31 @@ func hammer_blow(anvil: int = 0) -> void:
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
-	_tick_construction(delta)
+	if not _tick_construction(delta) and is_alive() and side != null:
+		_take_trophies()
+
+## In front of it: the anvils, the smiths' spots, where recruits wait and
+## where trophies are set down.
+func apron_at(origin: Vector2) -> Rect2:
+	return Rect2(origin + Vector2(-84.0, 18.0), Vector2(160.0, 106.0))
+
+func trophy_point() -> Vector2:
+	return global_position + TROPHY_DROP
+
+## Trophies set down by the forge go into the store, as if made here.
+func _take_trophies() -> void:
+	var at := trophy_point()
+	for node in get_tree().get_nodes_in_group("trophies"):
+		var trophy := node as Trophy
+		if trophy == null or not trophy.is_free() or trophy.is_queued_for_deletion():
+			continue
+		if trophy.global_position.distance_to(at) > TROPHY_RADIUS:
+			continue
+		side.receive_gear(trophy.item)
+		trophies_taken += 1
+		trophy.queue_free()
+
+var trophies_taken := 0
 
 ## The fire flickers and the sparks fly while there is work on; redrawn only then.
 func _process(delta: float) -> void:

@@ -71,6 +71,21 @@ func _ready() -> void:
 		add_child(rock)
 	for layout in map.sides():
 		_set_up_side(layout)
+	for spot in map.camp_positions:
+		var camp := BanditCamp.new()
+		camp.position = spot
+		camp.loadouts = map.camp_bandits
+		camp.bounty = map.camp_bounty.duplicate()
+		add_child(camp)
+	if map.fog and game != null and not game.spectating:
+		var fog := FogOfWar.new()
+		fog.name = "FogOfWar"
+		fog.setup(map.floor_size, game.human_team)
+		add_child(fog)
+	if map.weather:
+		var sky := Weather.new(map.title)
+		sky.name = "Weather"
+		add_child(sky)
 	if game != null:
 		game.register_match(states)
 
@@ -87,7 +102,7 @@ func _lay_floor() -> void:
 	void_rect.z_index = -4
 	void_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(void_rect)
-	# the land itself: grass, road, sky -- drawn once, presentation only
+	# the land itself: grass, road, the woods round it -- drawn once, presentation only
 	var land := Terrain.new()
 	land.name = "Terrain"
 	add_child(land)

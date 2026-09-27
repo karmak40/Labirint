@@ -9,6 +9,7 @@ extends "res://tests/lib/test_case.gd"
 
 var stage := 0
 var smithy: Forge
+var most_smiths := 0
 var spear_man: Worker
 var ordered_at := 0.0
 var ranks_before := 0
@@ -83,11 +84,14 @@ func step() -> bool:
 			check(spear_man.global_position.distance_to(smithy.collect_point()) < 60.0, "he waits at the forge",
 				spear_man.global_position.distance_to(smithy.collect_point()))
 			check(spear_man.weapon == PlayerBody.Weapon.NONE, "empty handed")
+			# two labourers: the last one on the trades is never taken to an anvil
 			_hand(me.base().door_point() + Vector2(0, 40))
-			check(gs.assign_smith(1), "a smith is put to the anvil")
+			_hand(me.base().door_point() + Vector2(20, 40))
 			stage = 2
 			frame = 0
 		2:
+			if frame == 60:
+				check(me.smiths().size() == 1, "with the spear waiting, a smith comes by himself", me.smiths().size())
 			if spear_man.draft.stage != Draft.Stage.CARRYING:
 				return false
 			check(spear_man.weapon == PlayerBody.Weapon.SPEAR, "the spear made, he carries it")
@@ -149,13 +153,16 @@ func step() -> bool:
 			check(_total(me.draft_price("knight")) == 110, "a knight's kit is dear", me.draft_price("knight"))
 			check(gs.hire(1, "knight"), "a knight is ordered")
 			check(smithy.all_pending().size() == 4, "all four pieces go on the list", smithy.all_pending())
-			_hand(me.base().door_point() + Vector2(20, 40))
-			check(gs.assign_smith(1), "a second smith for the other anvil")
+			# two more hands: one of ours is off building the second forge
+			_hand(me.base().door_point() + Vector2(40, 40))
+			_hand(me.base().door_point() + Vector2(60, 40))
 			ordered_at = seconds()
 			stage = 8
 		8:
+			most_smiths = maxi(most_smiths, me.smiths().size())
 			if _count(me, "knight") == 0:
 				return false
+			check(most_smiths == 2, "four pieces waiting bring a smith to each anvil", most_smiths)
 			var knight: Unit = null
 			for unit in me.squad.alive():
 				if unit.loadout == "knight":

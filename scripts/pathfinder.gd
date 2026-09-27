@@ -9,6 +9,7 @@ extends NavigationAgent2D
 ## On a floor with no navigation baked there is nothing to ask, and
 ## `has_floor_plan()` says so -- the owner then walks however it did before.
 
+const STANDING_PRIORITY := 0.5
 const REPATH := 16.0   ## how far a goal has to move before the way is worked out again
 const STALL_SPEED := 20.0  ## slower than this while trying to walk counts as not getting anywhere
 const STALL_TIME := 0.8    ## and this long of it means stuck
@@ -61,6 +62,21 @@ func heading_to(there: Vector2) -> Vector2:
 ## wish to actually walk on. `give_way`: standing about with nothing to do, so
 ## step aside for anyone coming through rather than stand there like a post.
 func settle(wish: Vector2, give_way := false) -> Vector2:
+	# the dead are no one to go round: a body that stayed in the crowd's
+	# reckoning stood there like a man on his feet, and a field of them froze
+	# the living
+	var body := get_parent() as PlayerBody
+	if body != null and body.is_dead:
+		if avoidance_enabled:
+			velocity = Vector2.ZERO
+			avoidance_enabled = false
+		return Vector2.ZERO
+	if not avoidance_enabled:
+		avoidance_enabled = true
+	# one standing about ranks below anyone on the move: the walker keeps his
+	# line and the one standing steps aside, instead of the two dancing in
+	# front of each other for ever
+	avoidance_priority = STANDING_PRIORITY if give_way and wish == Vector2.ZERO else 1.0
 	velocity = wish * max_speed
 	var out := wish
 	if steered != Vector2.INF and (walking or (give_way and wish == Vector2.ZERO)):

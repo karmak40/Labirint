@@ -151,6 +151,13 @@ func _door() -> Vector2:
 func door_point() -> Vector2:
 	return global_position + _door()
 
+## The ground in front of the door.
+const APRON := Vector2(76.0, 56.0)
+
+func apron_at(origin: Vector2) -> Rect2:
+	var door := origin + _door()
+	return Rect2(door + Vector2(-APRON.x * 0.5, -8.0), APRON)
+
 func _turn_out(kind: String) -> void:
 	var entry: Dictionary = CATALOG[kind]
 	var recruit: PlayerBody = (load(entry["scene"]) as PackedScene).instantiate()
@@ -168,7 +175,8 @@ func _turn_out(kind: String) -> void:
 		side.take_recruit(recruit)
 	var soldier := recruit as Unit
 	if soldier != null:
-		soldier.set_rally(rally_point)
+		# a place of his own at the rally point, beside those already standing there
+		soldier.set_rally(side.squad.place_for(soldier, rally_point) if side != null and rally_point != Vector2.INF else rally_point)
 		if side != null:
 			side.squad.add(soldier)
 			side.kit_out(soldier)

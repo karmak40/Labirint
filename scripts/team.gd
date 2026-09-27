@@ -2,7 +2,8 @@ class_name Team
 ## Which side something is on. Only the deciding cares: a blow lands on whatever
 ## it lands on, and it is the head behind the sword that picks who to go for.
 
-enum Id { NEUTRAL, PLAYER, ENEMY }
+## BANDITS: the camps (BanditCamp), everybody's enemy and nobody's side.
+enum Id { NEUTRAL, PLAYER, ENEMY, BANDITS }
 
 ## Neutral is nobody's enemy -- straw, sheep and anything that never said.
 static func hostile(a: int, b: int) -> bool:
@@ -19,6 +20,8 @@ static func color(id: int) -> Color:
 			return Color(0.26, 0.47, 0.82)
 		Id.ENEMY:
 			return Color(0.80, 0.25, 0.22)
+		Id.BANDITS:
+			return Color(0.50, 0.42, 0.26)
 	return Color(0.62, 0.62, 0.60)
 
 ## A flat ring in the side's colour round a body's feet, so two armies of the
