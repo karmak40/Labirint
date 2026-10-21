@@ -110,6 +110,15 @@ func set_rally(point: Vector2) -> void:
 	if watch == Watch.PATROL:
 		_set_watch(Watch.RETURNING)
 
+## Stand where it is now. `tight`: hold the ground -- fight whoever comes
+## within HOLD_LEASH, but chase nobody further.
+const HOLD_LEASH := 60.0
+
+func hold_here(tight: bool) -> void:
+	set_rally(global_position)
+	if tight:
+		leash = HOLD_LEASH
+
 ## Walk at a point, fighting whatever turns up on the way, and hold it on arrival.
 func set_attack_move(goal: Vector2) -> void:
 	order = Order.ATTACK_MOVE
@@ -144,6 +153,8 @@ func _ready() -> void:
 ## What the side's learning has done for it (PlayerState.kit_out): harder
 ## blows, a tougher hide. Health keeps its share, so a wounded man stays wounded.
 var harm_scale := 1.0
+## A title to show instead of the kind's name (a room's boss: «Вождь»).
+var epithet := ""
 var health_scale := 1.0
 var can_mend := false          ## a healer whose side has learned to heal
 var mending: PlayerBody = null ## who the cast under way is for

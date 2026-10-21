@@ -52,6 +52,12 @@ func _draw() -> void:
 		draw_polyline(line, ROAD, maxf(1.5, 30.0 * s))
 	for spot in field.map.tree_positions:
 		draw_circle(spot * s, maxf(1.3, 16.0 * s), TREE)
+	for outline in field.map.water:
+		var scaled := PackedVector2Array()
+		for p in outline:
+			scaled.append(p * s)
+		if not Geometry2D.triangulate_polygon(scaled).is_empty():
+			draw_colored_polygon(scaled, Color(0.22, 0.44, 0.58))
 	for spot in field.map.boulder_positions:
 		draw_circle(spot * s, maxf(1.6, 36.0 * s), Color(0.45, 0.44, 0.42))
 	for spot in field.map.vein_positions:

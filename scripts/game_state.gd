@@ -17,6 +17,16 @@ const SKIRMISH_SCENE := "res://scenes/main/Skirmish.tscn"
 const MENU_SCENE := "res://scenes/ui/MainMenu.tscn"
 const TESTBED_SCENE := "res://scenes/main/Main.tscn"
 const DEFAULT_MAP := "res://resources/maps/skirmish_long.tres"
+## The maps a skirmish can be played on (the menu's choice). `title` and `about`
+## are Russian, translated where shown.
+const SKIRMISH_MAPS := [
+	{"id": "valley", "path": DEFAULT_MAP, "title": "Долина",
+		"about": "Открытая долина: прямая дорога между замками и золото посередине."},
+	{"id": "lake", "path": "res://resources/maps/skirmish_lake.tres", "title": "Озёрный лес",
+		"about": "Посреди долины лежит большое озеро, а вдоль берегов густой лес. Пройти можно только южным берегом, там и сойдутся армии."},
+	{"id": "bridge", "path": "res://resources/maps/skirmish_bridge.tres", "title": "У моста",
+		"about": "Широкая река делит долину пополам, и перейти её можно только по мосту посередине. Кто удержит мост, тот и хозяин долины."},
+]
 
 ## What a side can put up in the field, what it costs and how long it takes.
 const BUILDINGS := {
@@ -28,6 +38,10 @@ const BUILDINGS := {
 		"cost": {"wood": 40, "ore": 10}, "time": 20.0, "limit": 1},
 	"forge": {"title": "Кузница", "about": "Куёт оружие для новобранцев, а ещё шлемы, латы и щиты. Две наковальни — два кузнеца. Не больше двух на сторону.",
 		"cost": {"wood": 50, "ore": 40}, "time": 25.0, "limit": 2},
+	"house": {"title": "Дом", "about": "Крыша ещё для восьми человек: без домов замок вмещает пятнадцать, и больше никого не нанять.",
+		"cost": {"wood": 30}, "time": 12.0},
+	"market": {"title": "Рынок", "about": "Обмен ресурсов: всегда с потерей, зато выручит, когда одно кончилось. Один на сторону.",
+		"cost": {"wood": 60, "ore": 20}, "time": 20.0, "limit": 1},
 }
 const BUILD_RANGE := 700.0     ## how far from its own buildings a side may build
 const CLEARANCE := 18.0        ## room left between one building and the next
@@ -41,6 +55,8 @@ var phase := Phase.MENU
 var human_team: int = Team.Id.PLAYER
 ## Both sides run by AIDirectors, and the human only watches.
 var spectating := false
+## Which map «Схватка» is played on (a path from SKIRMISH_MAPS).
+var skirmish_map := DEFAULT_MAP
 var winner: int = Team.Id.NEUTRAL
 ## Team -> PlayerState, for the match being played.
 var states := {}
@@ -53,7 +69,9 @@ var match_time := 0.0
 
 # --- the match ----------------------------------------------------------------
 
-func start_match(map_path: String = DEFAULT_MAP, watch_only := false) -> void:
+func start_match(map_path: String = "", watch_only := false) -> void:
+	if map_path == "":
+		map_path = skirmish_map
 	map = load(map_path) as MapData
 	spectating = watch_only
 	_go_to(SKIRMISH_SCENE)
@@ -100,7 +118,8 @@ func register_match(sides: Dictionary) -> void:
 			keep.base_destroyed.connect(_on_base_destroyed)
 		# every side nobody is playing gets a head of its own -- if it has a home
 		# to think from; attackers from outside (a holdout) are sent by RoomRules
-		if (spectating or team != human_team) and keep != null:
+		# "none": nobody runs it (a castle whose defenders just hold their posts)
+		if (spectating or team != human_team) and keep != null and (spectating or ai_strategy != "none"):
 			var director := AIDirector.new()
 			director.name = "AIDirector"
 			director.strategy = "random" if spectating else ai_strategy
@@ -188,6 +207,10 @@ static func _make(kind: String) -> Building:
 			return Forge.new()
 		"barracks":
 			return ProductionBuilding.new()
+		"house":
+			return House.new()
+		"market":
+			return Market.new()
 	return null
 
 static var _footprints := {}
@@ -223,6 +246,8 @@ func build_problem(team: int, kind: String, point: Vector2) -> String:
 		return "Библиотека уже есть"
 	if entry.has("limit") and kind == "forge" and state.forge_sites() >= int(entry["limit"]):
 		return "Уже две кузницы"
+	if entry.has("limit") and kind == "market" and state.has_market_site():
+		return "Рынок уже есть"
 	if entry.has("limit") and kind == "barracks" and state.has_barracks_site():
 		return "Казарма уже есть"
 	var ground := field()
@@ -256,6 +281,9 @@ func build_problem(team: int, kind: String, point: Vector2) -> String:
 			return "Загородит вход"
 		if front.has_area() and Rect2(other.global_position - other.footprint * 0.5, other.footprint).intersects(front):
 			return "Перед входом нет места"
+	for node in get_tree().get_nodes_in_group("waters"):
+		if (node as Water).reaches(area, 6.0):
+			return "Тут вода"
 	for node in get_tree().get_nodes_in_group("trees"):
 		if _gap(area, (node as Node2D).global_position) < 28.0:
 			return "Мешают деревья"
@@ -313,6 +341,21 @@ func build(team: int, kind: String, point: Vector2) -> bool:
 	built.emit(team, kind, building)
 	return true
 
+## Send one soldier to look at `point`, or call him back.
+func scout(team: int, point: Vector2) -> bool:
+	var state := side(team)
+	return is_playing() and state != null and state.scout(point)
+
+func recall_scout(team: int) -> void:
+	var state := side(team)
+	if is_playing() and state != null:
+		state.recall_scout()
+
+## One deal at the side's market (Market.DEALS).
+func trade(team: int, deal: String) -> bool:
+	var state := side(team)
+	return is_playing() and state != null and state.trade(deal)
+
 ## Start learning something (PlayerState.RESEARCH).
 func research(team: int, id: String) -> bool:
 	var state := side(team)
@@ -333,6 +376,29 @@ func release_repairer(team: int) -> bool:
 	var state := side(team)
 	return is_playing() and state != null and state.release_repairer()
 
+
+## An order to some of the army, by their ids (`get_instance_id()`): "attack"
+## (go there, fighting on the way), "move" (go there and stand), "stop" (stand
+## where they are) or "hold" (stand, and chase nobody far).
+func order(team: int, ids: Array, kind: String, point: Vector2 = Vector2.ZERO) -> void:
+	var state := side(team)
+	if not is_playing() or state == null:
+		return
+	var some: Array[Unit] = []
+	for unit in state.squad.alive():
+		if ids.has(unit.get_instance_id()):
+			some.append(unit)
+	if some.is_empty():
+		return
+	match kind:
+		"attack":
+			state.squad.attack_move(point, some)
+		"move":
+			state.squad.rally(point, some)
+		"stop":
+			state.squad.stop(some, false)
+		"hold":
+			state.squad.stop(some, true)
 
 ## Send the army at a point, fighting whatever it meets on the way.
 func attack_move(team: int, point: Vector2) -> void:

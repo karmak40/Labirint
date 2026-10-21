@@ -203,6 +203,9 @@ func _process(delta: float) -> void:
 			_spark[i] += delta
 		queue_redraw()
 
+func debris_colors() -> Array[Color]:
+	return [STONE, STONE_DARK, ROOF]
+
 func _draw_standing() -> void:
 	var w := footprint.x * 0.5 + 6.0
 	var foot := footprint.y * 0.5
@@ -250,7 +253,7 @@ func _draw_standing() -> void:
 ## The anvil on its stump, with the piece being worked glowing on it, and a
 ## spray of sparks for a moment after every blow.
 func _draw_anvil(anvil: int) -> void:
-	draw_set_transform(ANVILS[anvil], 0.0, Vector2.ONE * ANVIL_SIZE)
+	_draw_xf(Transform2D(0.0, Vector2.ONE * ANVIL_SIZE, 0.0, ANVILS[anvil]))
 	var a := Vector2.ZERO
 	draw_rect(Rect2(a + Vector2(-6.0, -8.0), Vector2(12.0, 8.0)), STUMP)
 	draw_line(a + Vector2(-6.0, -8.0), a + Vector2(6.0, -8.0), Color(0.30, 0.21, 0.13), 1.0)
@@ -268,4 +271,4 @@ func _draw_anvil(anvil: int) -> void:
 			var from := a + Vector2(0.0, -22.0)
 			var dir := Vector2.from_angle(angle)
 			draw_line(from + dir * 4.0 * fly, from + dir * (5.0 + 12.0 * fly), Color(FIRE_CORE, 1.0 - fly), 1.4)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_draw_xf()

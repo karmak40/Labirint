@@ -19,7 +19,7 @@ func begin() -> void:
 					keys[text] = path
 	check(keys.size() > 300, "the scripts' texts were found", keys.size())
 	var lang := root.get_node("Lang")
-	check(lang.codes.has("en") and lang.codes.has("de"), "English and German are loaded", lang.codes)
+	check(lang.codes.has("en") and lang.codes.has("de") and lang.codes.has("es"), "English, German and Spanish are loaded", lang.codes)
 	var pattern := RegEx.create_from_string(PLACEHOLDER)
 	for code: String in lang.codes:
 		if code == lang.SOURCE:
@@ -49,6 +49,9 @@ func begin() -> void:
 	lang.use("de")
 	check(TranslationServer.translate("Схватка") == "Gefecht", "German speaks", TranslationServer.translate("Схватка"))
 	check(lang.lower(TranslationServer.translate("Копьё")) == "Speer", "German keeps nouns capitalised")
+	lang.use("es")
+	check(TranslationServer.translate("Схватка") == "Escaramuza", "Spanish speaks", TranslationServer.translate("Схватка"))
+	check(lang.lower(TranslationServer.translate("Копьё")) == "lanza", "Spanish lower-cases nouns")
 	lang.use("ru")
 	check(TranslationServer.translate("Схватка") == "Схватка", "Russian is the source", TranslationServer.translate("Схватка"))
 	lang.use("xx")

@@ -29,6 +29,9 @@ func _click(at_world: Vector2, button: MouseButton, shift := false) -> void:
 	event.position = root.get_canvas_transform() * at_world
 	event.global_position = event.position
 	root.push_input(event, true)
+	var up := event.duplicate() as InputEventMouseButton
+	up.pressed = false
+	root.push_input(up, true)
 
 func _click_screen(at: Vector2) -> void:
 	var event := InputEventMouseButton.new()
@@ -57,13 +60,13 @@ func step() -> bool:
 		1:
 			if frame == 2:
 				check(hud.tab == 3, "Tab three times moves to «Постройки»", hud.tab)
-				_key(KEY_3)
+				_key(KEY_C)
 			if frame == 4:
-				check(hud.input.placing == "library", "key 3 there starts placing a library", hud.input.placing)
+				check(hud.input.placing == "library", "key C there starts placing a library", hud.input.placing)
 				_key(KEY_ESCAPE)
 			if frame == 6:
 				check(hud.input.placing == "" and not paused, "Esc cancels the placing and does not pause")
-				_key(KEY_3)
+				_key(KEY_C)
 			if frame == 8:
 				# the castle is in the way here
 				_click(gs.human().base().global_position, MOUSE_BUTTON_LEFT)
@@ -74,9 +77,9 @@ func step() -> bool:
 			if frame == 12:
 				check(gs.human().has_library_site(), "a left click on open ground lays out the library")
 				check(hud.input.placing == "", "and ends the placing")
-				_key(KEY_2)
+				_key(KEY_X)
 			if frame == 14:
-				check(hud.input.placing == "tower", "key 2 starts placing a tower")
+				check(hud.input.placing == "tower", "key X starts placing a tower")
 				_click(Vector2(760, 330), MOUSE_BUTTON_LEFT, true)
 			if frame == 16:
 				check(hud.input.placing == "tower", "with Shift held it carries on placing")

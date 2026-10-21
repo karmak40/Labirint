@@ -19,7 +19,13 @@ const SAVE_PATH := "user://campaign.cfg"
 ## what each key does; `ai` is the enemy's strategy where it has a castle.
 const ROOMS := [
 	{
-		"id": "forest", "title": "Лесной рубеж", "map": "res://resources/maps/campaign_forest.tres",
+		"id": "tutorial", "title": "Учебный штурм", "map": "res://resources/maps/campaign_tutorial.tres",
+		"brief": "Небольшой отряд стоит у края долины, а за туманом — вражеский замок с двумя башнями и защитниками. Здесь вы научитесь выбирать бойцов, собирать их в группы и строить отряд, разведывать, сносить башни и брать крепость штурмом. Подсказки появятся по ходу боя.",
+		"goal": "Разрушить вражеский замок.",
+		"fast": 420.0, "army": 0.75, "ai": "none", "known": ["magic", "healing"], "tutorial": true,
+	},
+	{
+		"id": "forest", "open": true, "title": "Лесной рубеж", "map": "res://resources/maps/campaign_forest.tres",
 		"brief": "Враг встал лагерем на другом конце долины. Нарубите леса, добудьте руды, соберите войско и сожгите их крепость.",
 		"goal": "Разрушить вражескую крепость.",
 		"fast": 900.0, "castle": 0.75, "ai": "balanced",
@@ -67,6 +73,15 @@ const ROOMS := [
 				"say": "Последняя волна: рыцари орды!", "reward": {"gold": 40}},
 		],
 	},
+	{
+		"id": "raid", "title": "Разведка боем", "map": "res://resources/maps/campaign_raid.tres",
+		"brief": "Денег и замка нет — только небольшой отряд с магом-целителем. По пути стоят три лагеря разбойников: разгромите лагерь, и пленные присоединятся к вам. За туманом — вражеская крепость. Её стережёт вождь со своими телохранителями: он намного сильнее любого бойца, так что берегите отряд и не лезьте к нему поодиночке.",
+		"goal": "Разгромить лагеря и разрушить вражескую крепость.",
+		"fast": 720.0, "army": 0.6, "ai": "none", "known": ["magic", "healing"],
+		"camp_men": {"spearman": 2, "archer": 1},
+		"boss": {"kind": "greatsword", "epithet": "Вождь", "health": 3.5, "harm": 1.4, "size": 1.25,
+			"kit": ["helm", "armour"], "guards": {"knight": 2}},
+	},
 ]
 
 var save_path := SAVE_PATH
@@ -109,9 +124,12 @@ func save() -> void:
 func stars_of(index: int) -> int:
 	return int(stars.get(ROOMS[index]["id"], 0))
 
-## The first room is always open; each later one once the one before is won.
+## The first room is always open, and any marked `open`; each later one once
+## the one before is won.
 func is_open(index: int) -> bool:
-	return index == 0 or (index > 0 and index < ROOMS.size() and stars_of(index - 1) > 0)
+	if index < 0 or index >= ROOMS.size():
+		return false
+	return index == 0 or bool(ROOMS[index].get("open", false)) or stars_of(index - 1) > 0
 
 func start(index: int) -> void:
 	if not is_open(index):
@@ -147,7 +165,9 @@ func score(match_time: float, castle_share: float) -> int:
 		earned += 1
 	elif not room.has("fast") and castle_share >= float(room.get("castle_high", 1.0)):
 		earned += 1
-	if castle_share >= float(room["castle"]):
+	# the share kept for the third star: of the castle, or of the army where
+	# there is no castle of ours (`army`)
+	if castle_share >= float(room.get("castle", room.get("army", 1.0))):
 		earned += 1
 	return earned
 
@@ -158,6 +178,9 @@ func _on_match_ended(winner: int) -> void:
 	if winner == game.human_team:
 		var keep: Base = game.human().base() if game.human() != null else null
 		var share := keep.health / keep.health_max if keep != null else 0.0
+		var rules := game.field().get_node_or_null("RoomRules") as RoomRules if game.field() != null else null
+		if ROOMS[current].has("army") and rules != null:
+			share = rules.army_share()
 		earned = score(game.match_time, share)
 		var id: String = ROOMS[current]["id"]
 		stars[id] = maxi(int(stars.get(id, 0)), earned)

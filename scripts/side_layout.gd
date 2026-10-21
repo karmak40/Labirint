@@ -19,5 +19,8 @@ extends Resource
 @export var rally := Vector2.ZERO
 ## One entry per worker already on the field, by trade: "wood", "ore" or "gold".
 @export var start_workers: PackedStringArray = PackedStringArray()
+## Soldiers standing on the field from the start (Unit.LOADOUTS kinds), in
+## ranks round `rally`: an army to play with, or a castle's defenders.
+@export var start_soldiers: PackedStringArray = PackedStringArray()
 ## What is in the store on the first frame, e.g. {"wood": 4}.
 @export var start_stock: Dictionary = {}

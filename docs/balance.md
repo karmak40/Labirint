@@ -8,6 +8,8 @@
 | Найм рабочих и новобранцев, время обучения в казарме | `scripts/production_building.gd:12` `CATALOG`, `:44` `TRAIN_TIME` |
 | Оружие и снаряжение: цена и время ковки | `scripts/forge.gd:18` `GEAR`, `:47` `BLOW_WORK` (сколько работы даёт удар молота) |
 | Постройки: цена, время стройки, лимиты | `scripts/game_state.gd:22` `BUILDINGS`; работа одного удара строителя: `scripts/building.gd:49` `BUILD_BLOW` |
+| Население: сколько вмещают замок и дом, потолок | `scripts/player_state.gd` `POP_BASE`, `POP_HOUSE`, `POP_MAX` |
+| Рынок: сделки, базовые цены, комиссия, насколько сделка сдвигает курс и как быстро он возвращается | `scripts/market.gd` `DEALS`, `BASE_PRICE`, `FEE`, `STEP`, `LOW`/`HIGH`, `RECOVER` |
 | Исследования: цена, время, эффекты | `scripts/player_state.gd:18` `RESEARCH` |
 | Ремонт: прочность за удар и цена | `scripts/building.gd:143` `REPAIR_HP`, `REPAIR_COST` |
 | Ресурсы карты: запас жил, брёвна с дерева, восстановление, стартовый склад | `resources/maps/*.tres`: `ore_rocks`, `ore_rock_worth`, `gold_*`, `tree_logs`, `log_worth`, `regrow_time`, `start_stock` |

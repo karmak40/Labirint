@@ -204,6 +204,8 @@ var helm := Helm.NONE
 var shielded := false
 ## A cloth hood over the head instead of a helm: how a bandit is known at a glance.
 var hooded := false
+## A tall plume on the helm, so a chieftain is known across the field (RoomRules' boss).
+var plumed := false
 const SHIELD_WEAPONS := [Weapon.SWORD, Weapon.CLUB, Weapon.AXE, Weapon.DAGGER, Weapon.TORCH]
 var donning := false    ## which way round the current helm action goes
 var rise_time := -1.0   ## negative means not getting up

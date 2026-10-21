@@ -69,6 +69,14 @@ func _ready() -> void:
 		var rock := Boulder.new()
 		rock.position = spot
 		add_child(rock)
+	for outline in map.water:
+		var pool := Water.new()
+		pool.outline = outline
+		add_child(pool)
+	for span in map.bridges:
+		var planks := Bridge.new()
+		planks.span = span
+		add_child(planks)
 	for layout in map.sides():
 		_set_up_side(layout)
 	for spot in map.camp_positions:
@@ -82,12 +90,44 @@ func _ready() -> void:
 		fog.name = "FogOfWar"
 		fog.setup(map.floor_size, game.human_team)
 		add_child(fog)
+	# and every side the computer may play sees only what its own men see
+	if map.fog:
+		for layout in map.sides():
+			if game == null or game.spectating or layout.team != game.human_team:
+				var vision := FogOfWar.new()
+				vision.quiet = true
+				vision.name = "Vision%d" % layout.team
+				vision.setup(map.floor_size, layout.team)
+				add_child(vision)
 	if map.weather:
 		var sky := Weather.new(map.title)
 		sky.name = "Weather"
 		add_child(sky)
 	if game != null:
 		game.register_match(states)
+
+## The soldiers a side starts with, in ranks of five round its rally point,
+## each holding its own place. The side's state takes them into its squad.
+const MUSTER_SPACING := Vector2(40.0, 36.0)
+
+func _muster(layout: SideLayout) -> void:
+	var count := layout.start_soldiers.size()
+	for i in count:
+		var kind: String = layout.start_soldiers[i]
+		var soldier: Unit
+		if kind == "knight":
+			soldier = (load("res://scenes/knight/Knight.tscn") as PackedScene).instantiate()
+		else:
+			soldier = (load("res://scenes/warrior/Warrior.tscn") as PackedScene).instantiate()
+			soldier.loadout = kind
+		soldier.team = layout.team
+		var row := i / 5
+		var column := i % 5
+		var in_row := mini(5, count - row * 5)
+		soldier.position = layout.rally + Vector2(-float(row) * MUSTER_SPACING.x * 1.2,
+			(float(column) - float(in_row - 1) * 0.5) * MUSTER_SPACING.y) * Vector2(signf(0.5 - float(layout.team == Team.Id.ENEMY)), 1.0)
+		add_child(soldier)
+		soldier.set_rally(soldier.position)
 
 func state_of(team: int) -> PlayerState:
 	return states.get(team)
@@ -154,6 +194,7 @@ func _add_vein(spot: Vector2, kind: String) -> void:
 
 func _set_up_side(layout: SideLayout) -> void:
 	var team := layout.team
+	_muster(layout)
 	if not layout.has_base:
 		# attackers from outside: nothing of theirs stands here but towers
 		for spot in layout.towers:

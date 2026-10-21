@@ -85,7 +85,7 @@ func set_rally_point(point: Vector2) -> void:
 
 func can_hire(kind: String) -> bool:
 	return is_alive() and is_complete() and side != null and kinds.has(kind) and queue.size() < QUEUE_MAX \
-		and is_unlocked(kind) and side.economy.can_afford(price_for(kind))
+		and is_unlocked(kind) and side.room_for() and side.economy.can_afford(price_for(kind))
 
 ## What hiring one costs right now, out of this side's store.
 func price_for(kind: String) -> Dictionary:
@@ -181,6 +181,14 @@ func _turn_out(kind: String) -> void:
 			side.squad.add(soldier)
 			side.kit_out(soldier)
 	unit_ready.emit(recruit)
+
+## The log walls under the roof.
+func damage_faces() -> Array[Rect2]:
+	var w := footprint.x * 0.5 + 6.0
+	return [Rect2(-w, -WALL_HEIGHT, w * 2.0, WALL_HEIGHT)]
+
+func debris_colors() -> Array[Color]:
+	return [TIMBER, TIMBER_DARK, ROOF]
 
 func _draw_standing() -> void:
 	var w := footprint.x * 0.5 + 6.0

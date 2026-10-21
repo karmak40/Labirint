@@ -66,6 +66,12 @@ func step() -> bool:
 			head.team = Team.Id.ENEMY
 			current_scene.add_child(head)
 			head.game = gs
+			# (its towers at the gorge's mouth already see its camp; forget that for a moment)
+			var vision: FogOfWar = gs.field().get_node("Vision%d" % Team.Id.ENEMY)
+			vision.explored.fill(0)
+			check(head._camp_to_clear(gs.side(Team.Id.ENEMY)) == null, "a camp its men have not found yet is not picked")
+			# as if its scout had been all over the field
+			vision.explored.fill(1)
 			var theirs := head._camp_to_clear(gs.side(Team.Id.ENEMY))
 			check(theirs != null and theirs != near, "the enemy's head picks the camp on its half")
 			var ours := head._camp_to_clear(me)

@@ -44,6 +44,24 @@ signal wave_sent(index: int, count: int, say: String)
 signal wave_beaten(index: int, reward: Dictionary)
 ## Every wave of a holdout is beaten: the match is won.
 signal held
+## A cleared bandit camp sent men to join us (RoomRules, "camp_men").
+signal reinforced(count: int, from: Vector2)
+## The room's boss (see "boss") fell.
+signal boss_down
+
+## A room may also have:
+##   "known": ["magic", "healing"]  studies our side starts with
+##   "army": 0.5                    (Campaign) the share of our starting army to
+##                                  keep for the third star; with no castle of
+##                                  ours, losing the whole army loses the room
+##   "tutorial": true               the HUD shows its step-by-step lessons (Tutorial)
+##   "camp_men": {"spearman": 2}    men who join us where a bandit camp falls to
+##                                  us (a room with no store to pay a chest into)
+##   "boss": {                      one strong man of the enemy's, at its rally
+##       "kind": "greatsword", "epithet": "Вождь",
+##       "health": 3.5, "harm": 1.4, "size": 1.25,
+##       "kit": ["helm", "armour"], "guards": {"knight": 2}}
+var army_at_start := -1
 
 const FORMATION := Vector2(26.0, 26.0)   ## between men in a wave's ranks and files
 const FILES := 5                         ## men abreast
@@ -59,8 +77,14 @@ var game: Node
 ## One per wave sent: {"index", "units": Array[Unit], "reward", "beaten"}.
 var outs: Array = []
 
+var boss: Unit
+var camps_total := 0
+var camps_cleared := 0
+
 func _ready() -> void:
 	game = get_node_or_null("/root/GameState")
+	_know.call_deferred()
+	_set_field.call_deferred()
 	var difficulty: String = game.ai_difficulty if game != null else "normal"
 	waves = expand(room, difficulty)
 	after_waves = room.get("after_waves", "open_gates" if _enemy_keep() != null else "win")
@@ -69,6 +93,113 @@ func _ready() -> void:
 		if after_waves == "open_gates" and _enemy_keep() != null:
 			_enemy_keep().shut = true
 			_enemy_keep().queue_redraw()
+
+## What a room puts on the field beyond its map: the boss, and a watch on the
+## camps, whose fall may bring us men.
+func _set_field() -> void:
+	if game == null or game.field() == null:
+		return
+	for node in get_tree().get_nodes_in_group("camps"):
+		camps_total += 1
+		(node as BanditCamp).cleared.connect(_on_camp_cleared.bind(node))
+	if room.has("boss"):
+		_raise_boss(room["boss"])
+
+func _on_camp_cleared(team: int, _bounty: Dictionary, camp: BanditCamp) -> void:
+	if game == null or team != game.human_team:
+		return
+	camps_cleared += 1
+	var us: PlayerState = game.human()
+	var men: Dictionary = room.get("camp_men", {})
+	if us == null or men.is_empty():
+		return
+	var count := 0
+	for kind: String in men:
+		for i in int(men[kind]):
+			var soldier := _soldier(kind, us.team)
+			soldier.position = camp.global_position + Vector2(-70.0 - 30.0 * float(count / 3), 28.0 * (float(count % 3) - 1.0))
+			game.field().add_child(soldier)
+			us.squad.add(soldier)
+			us.kit_out(soldier)
+			soldier.set_rally(soldier.position)
+			count += 1
+	reinforced.emit(count, camp.global_position)
+
+## A soldier of `kind` for `team`, not yet on the field.
+func _soldier(kind: String, team: int) -> Unit:
+	var entry: Dictionary = ProductionBuilding.CATALOG[kind]
+	var soldier: Unit = (load(entry["scene"]) as PackedScene).instantiate()
+	soldier.team = team
+	if entry.has("loadout"):
+		soldier.loadout = entry["loadout"]
+	return soldier
+
+## The enemy's strong man and his bodyguard, standing at its rally point.
+func _raise_boss(spec: Dictionary) -> void:
+	var foe: PlayerState = game.enemy_of(game.human_team)
+	if foe == null:
+		return
+	var spot: Vector2 = game.field().map.enemy.rally
+	boss = (load("res://scenes/warrior/Warrior.tscn") as PackedScene).instantiate()
+	boss.team = foe.team
+	boss.loadout = spec.get("kind", "greatsword")
+	boss.position = spot
+	game.field().add_child(boss)
+	foe.squad.add(boss)
+	foe.kit_out(boss)
+	for item: String in spec.get("kit", []):
+		if boss.can_wear(item):
+			boss.wear(item)
+	boss.set_scales(boss.harm_scale * float(spec.get("harm", 1.0)), boss.health_scale * float(spec.get("health", 1.0)))
+	boss.epithet = spec.get("epithet", "")
+	boss.plumed = true
+	var size := float(spec.get("size", 1.0))
+	boss.scale = Vector2(size, size)
+	boss.set_rally(spot)
+	boss.died.connect(func(_body: PlayerBody) -> void: boss_down.emit())
+	var index := 0
+	var guards: Dictionary = spec.get("guards", {})
+	for kind: String in guards:
+		for i in int(guards[kind]):
+			var guard := _soldier(kind, foe.team)
+			guard.position = spot + Vector2(-50.0, 60.0 * (1.0 if index % 2 == 0 else -1.0) * float(1 + index / 2))
+			game.field().add_child(guard)
+			foe.squad.add(guard)
+			foe.kit_out(guard)
+			guard.set_rally(guard.position)
+			index += 1
+
+## The studies the room gives us, known from the start.
+func _know() -> void:
+	var us: PlayerState = game.human() if game != null else null
+	if us == null:
+		return
+	for id in room.get("known", []):
+		us.researched[id] = true
+	for unit in us.squad.alive():
+		us.kit_out(unit)
+
+## How much of the army we started with is still standing (1 before any count).
+func army_share() -> float:
+	var us: PlayerState = game.human() if game != null else null
+	if us == null or army_at_start <= 0:
+		return 1.0
+	return float(us.squad.alive().size()) / float(army_at_start)
+
+## With no castle of ours, the army is all there is: when it is gone, so is the room.
+func _watch_army() -> void:
+	var us: PlayerState = game.human() if game != null else null
+	if us == null or us.base() != null:
+		return
+	var standing := us.squad.alive().size()
+	if army_at_start < 0:
+		if standing > 0:
+			army_at_start = standing
+			_know()
+		return
+	if standing == 0 and game.is_playing():
+		var foe: PlayerState = game.enemy_of(game.human_team)
+		game.end_match(foe.team if foe != null else Team.Id.ENEMY)
 
 ## The room's waves as they will come: repeats spelled out, men scaled by the
 ## difficulty and by growth, sorted by time.
@@ -98,7 +229,10 @@ func _enemy_keep() -> Base:
 ## The line the HUD shows under the store: what to do now.
 func objective() -> String:
 	if waves.is_empty() or open:
-		return tr(room["goal"]) if room.has("goal") else ""
+		var goal: String = tr(room["goal"]) if room.has("goal") else ""
+		if camps_total > 0 and room.has("camp_men"):
+			goal += "  " + tr("Лагерей разгромлено: %d из %d") % [camps_cleared, camps_total]
+		return goal
 	if sent < waves.size():
 		var next: Dictionary = waves[sent]
 		return tr("Волна %d из %d через %d с") % [sent + 1, waves.size(), maxi(0, int(next["at"] - clock))]
@@ -112,6 +246,7 @@ func _wave_left() -> int:
 	return left
 
 func _physics_process(delta: float) -> void:
+	_watch_army()
 	if game == null or not game.is_playing() or open:
 		return
 	clock += delta

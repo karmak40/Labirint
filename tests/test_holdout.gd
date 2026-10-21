@@ -5,7 +5,7 @@ extends "res://tests/lib/test_case.gd"
 ## the last wave wins the room. Also how a room's wave list is spelled out
 ## (repeats, growth, the difficulty's scale).
 
-const ROOM := 3
+const ROOM := 4
 
 var stage := 0
 var campaign: Node

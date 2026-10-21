@@ -244,6 +244,22 @@ static func draw(c: CanvasItem, kind: String, box: Rect2) -> void:
 			for k in 4:
 				var x := 9.0 + k * 5.0
 				c.draw_line(p.call(x, 21.0), p.call(x - 2.0, 28.0), MAGIC, 1.6 * s)
+		"house":
+			c.draw_rect(Rect2(p.call(8.0, 15.0), Vector2(16.0, 13.0) * s), Color(0.74, 0.64, 0.47))
+			c.draw_colored_polygon(PackedVector2Array([p.call(4.0, 16.0), p.call(16.0, 5.0), p.call(28.0, 16.0)]), Color(0.75, 0.60, 0.30))
+			c.draw_rect(Rect2(p.call(17.0, 20.0), Vector2(5.0, 8.0) * s), Color(0.30, 0.20, 0.12))
+			c.draw_rect(Rect2(p.call(10.0, 18.0), Vector2(5.0, 4.0) * s), Color(0.95, 0.80, 0.45))
+		"market":
+			c.draw_rect(Rect2(p.call(6.0, 17.0), Vector2(20.0, 10.0) * s), Color(0.55, 0.41, 0.26))
+			c.draw_colored_polygon(PackedVector2Array([p.call(3.0, 17.0), p.call(8.0, 8.0), p.call(24.0, 8.0), p.call(29.0, 17.0)]), Color(0.82, 0.32, 0.26))
+			for k in 3:
+				c.draw_line(p.call(10.0 + k * 6.0, 17.0), p.call(12.0 + k * 6.0, 8.0), Color(0.96, 0.93, 0.85), 1.6 * s)
+			c.draw_circle(p.call(12.0, 16.0), 2.5 * s, GOLD)
+			c.draw_circle(p.call(20.0, 16.0), 2.5 * s, GOLD)
+		"pop":
+			_figure(c, p, s)
+			c.draw_colored_polygon(PackedVector2Array([p.call(18.0, 14.0), p.call(24.0, 8.0), p.call(30.0, 14.0)]), Color(0.75, 0.60, 0.30))
+			c.draw_rect(Rect2(p.call(20.0, 14.0), Vector2(8.0, 8.0) * s), Color(0.74, 0.64, 0.47))
 		"rally":
 			c.draw_line(p.call(9.0, 29.0), p.call(9.0, 3.0), WOOD_DARK, 2.4 * s)
 			c.draw_colored_polygon(PackedVector2Array([p.call(10.0, 4.0), p.call(27.0, 9.0), p.call(10.0, 15.0)]), FLAG)
@@ -270,6 +286,10 @@ static func site_of(building: Building) -> String:
 		return "forge"
 	if building is Library:
 		return "library"
+	if building is House:
+		return "house"
+	if building is Market:
+		return "market"
 	return "barracks"
 
 static func _rock(c: CanvasItem, p: Callable, s: float, face: Color, edge: Color) -> void:

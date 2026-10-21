@@ -9,13 +9,13 @@ extends Node
 ## each Russian literal, and data tables (names, descriptions) are translated
 ## where they are shown.
 ##
-## The choice is kept in user://settings.cfg. LABIRINT_LANG=<code> overrides it
-## for one run; tests force Russian, whatever the player picked.
+## There is no choice to make: the game speaks the system's language if it has
+## a book for it, English otherwise. LABIRINT_LANG=<code> overrides that for one
+## run (to try a language on this PC); tests force Russian.
 
 const SOURCE := "ru"
 const SOURCE_NAME := "Русский"
 const FOLDER := "res://locale"
-const SETTINGS := "user://settings.cfg"
 ## A message every .po carries: the language's name in itself.
 const NAME_KEY := "@language"
 ## A message a .po sets to "no" when its nouns keep their capital letter inside
@@ -27,14 +27,10 @@ var codes: Array[String] = [SOURCE]
 var _books := {}               ## code -> Translation
 
 ## In _init, not _ready: a SceneTree script (a test) gets its _initialize
-## before the autoloads are ready, and must be able to overrule the choice.
+## before the autoloads are ready, and must be able to overrule the language.
 func _init() -> void:
 	_load_books()
 	var wanted := OS.get_environment("LABIRINT_LANG")
-	if wanted == "":
-		var settings := ConfigFile.new()
-		if settings.load(SETTINGS) == OK:
-			wanted = str(settings.get_value("game", "language", ""))
 	if wanted == "":
 		wanted = _from_system()
 	use(wanted if codes.has(wanted) else SOURCE)
@@ -80,14 +76,6 @@ func current() -> String:
 ## code must be rebuilt).
 func use(code: String) -> void:
 	TranslationServer.set_locale(code if codes.has(code) else SOURCE)
-
-## Speaks `code` and remembers it for the next start.
-func choose(code: String) -> void:
-	use(code)
-	var settings := ConfigFile.new()
-	settings.load(SETTINGS)
-	settings.set_value("game", "language", current())
-	settings.save(SETTINGS)
 
 ## A language's name in itself: "Deutsch", "English".
 func name_of(code: String) -> String:

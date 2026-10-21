@@ -99,7 +99,6 @@ func _ready() -> void:
 		Campaign.leave()
 		GameState.start_match(GameState.DEFAULT_MAP, true))
 	_button(column, tr("Достижения"), _show_achievements)
-	_button(column, "%s: %s" % [tr("Язык"), Lang.name_of(Lang.current())], _show_languages)
 	_button(column, tr("Тестовый стенд"), GameState.open_testbed)
 	_button(column, tr("Выход"), func() -> void: get_tree().quit())
 	start.grab_focus()
@@ -139,6 +138,11 @@ func _notification(what: int) -> void:
 func _show_skirmish_setup() -> void:
 	var panel := _overlay()
 	var column := _overlay_column(panel, tr("Схватка"))
+	var maps := []
+	for entry in GameState.SKIRMISH_MAPS:
+		maps.append([entry["path"], tr(entry["title"]), tr(entry["about"])])
+	_choice_row(column, tr("Карта"), maps, GameState.skirmish_map,
+		func(path: String) -> void: GameState.skirmish_map = path)
 	_difficulty_row(column)
 	var strategies := [["random", tr("Случайная"), tr("Стратегия выбирается в начале боя и не раскрывается до конца.")]]
 	for id in AIProfile.STRATEGIES:
@@ -204,32 +208,46 @@ func _show_campaign() -> void:
 		campaign_panel.queue_free()
 	campaign_panel = _overlay()
 	var column := _overlay_column(campaign_panel, tr("Кампания"))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
+	# up to five cards in a row; more go in rows of three
+	var row := GridContainer.new()
+	row.columns = Campaign.ROOMS.size() if Campaign.ROOMS.size() <= 5 else 3
+	row.add_theme_constant_override("h_separation", 12)
+	row.add_theme_constant_override("v_separation", 12)
 	column.add_child(row)
 	for i in Campaign.ROOMS.size():
 		var room: Dictionary = Campaign.ROOMS[i]
 		var card := Button.new()
-		card.custom_minimum_size = Vector2(190.0, 120.0)
+		card.custom_minimum_size = Vector2(170.0 if Campaign.ROOMS.size() > 4 else 190.0, 120.0)
 		card.focus_mode = Control.FOCUS_NONE
 		var open: bool = Campaign.is_open(i)
 		var earned: int = Campaign.stars_of(i)
-		card.text = "%s\n%s\n%s" % [tr("Комната %d") % (i + 1), tr(room["title"]),("★".repeat(earned) + "☆".repeat(3 - earned)) if open else tr("закрыта")]
+		card.text = "%s\n%s\n%s" % [_room_label(i), tr(room["title"]),("★".repeat(earned) + "☆".repeat(3 - earned)) if open else tr("закрыта")]
 		card.add_theme_font_size_override("font_size", 16)
 		card.disabled = not open
-		card.tooltip_text = tr(room["goal"]) if open else tr("Сначала пройдите комнату %d") % i
+		card.tooltip_text = tr(room["goal"]) if open else tr("Сначала пройдите: %s") % _room_label(i - 1)
 		card.pressed.connect(_show_briefing.bind(i))
 		row.add_child(card)
 	var back := _button(column, tr("Назад"), func() -> void: campaign_panel.visible = false)
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
+## "Обучение" for the lessons, and the rooms after it numbered from 1.
+func _room_label(index: int) -> String:
+	if bool(Campaign.ROOMS[index].get("tutorial", false)):
+		return tr("Обучение")
+	var number := 0
+	for i in index + 1:
+		if not bool(Campaign.ROOMS[i].get("tutorial", false)):
+			number += 1
+	return tr("Комната %d") % number
+
 ## What a room is about, what it asks, and what earns its stars; then into it.
 func _show_briefing(index: int) -> void:
 	var room: Dictionary = Campaign.ROOMS[index]
 	var panel := _overlay()
-	var column := _overlay_column(panel, "%s · %s" % [tr("Комната %d") % (index + 1), tr(room["title"])])
+	var column := _overlay_column(panel, "%s · %s" % [_room_label(index), tr(room["title"])])
 	# a holdout can not be won faster: its second star is for a castle nearly whole
-	var stars_line: String = tr("★ победа   ★ быстрее %d мин   ★ крепость цела хотя бы на %d%%") % [int(room["fast"] / 60.0), int(room["castle"] * 100.0)] \
+	var stars_line: String = tr("★ победа   ★ быстрее %d мин   ★ в живых хотя бы %d%% армии") % [int(room["fast"] / 60.0), int(room["army"] * 100.0)] \
+		if room.has("army") else tr("★ победа   ★ быстрее %d мин   ★ крепость цела хотя бы на %d%%") % [int(room["fast"] / 60.0), int(room["castle"] * 100.0)] \
 		if room.has("fast") else tr("★ победа   ★ крепость цела хотя бы на %d%%   ★ хотя бы на %d%%") % [int(room["castle"] * 100.0), int(room.get("castle_high", 1.0) * 100.0)]
 	for line in [[tr(room["brief"]), UiStyle.TEXT, 15], [tr("Цель: %s") % tr(room["goal"]), UiStyle.GOLD_BRIGHT, 15],
 			[stars_line, UiStyle.DIM, 13]]:
@@ -253,18 +271,6 @@ func _show_briefing(index: int) -> void:
 	column.add_child(buttons)
 	_button(buttons, tr("В бой"), func() -> void: Campaign.start(index))
 	_button(buttons, tr("Назад"), func() -> void: panel.queue_free())
-
-## Every language there is; picking one speaks it from now on and builds the
-## menu again in it.
-func _show_languages() -> void:
-	var panel := _overlay()
-	var column := _overlay_column(panel, tr("Язык"))
-	for code in Lang.codes:
-		var button := _button(column, Lang.name_of(code), func() -> void:
-			Lang.choose(code)
-			get_tree().reload_current_scene())
-		button.disabled = code == Lang.current()
-	_button(column, tr("Назад"), func() -> void: panel.queue_free())
 
 func _overlay() -> Control:
 	var shade := ColorRect.new()

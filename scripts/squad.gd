@@ -23,27 +23,60 @@ func alive() -> Array[Unit]:
 			standing.append(unit)
 	return standing
 
-## Everyone to `point`, each to a place of his own round it, so the ranks
-## stand still instead of shoving for one spot.
-func rally(point: Vector2) -> void:
-	var ranks := alive()
-	var places := _deal(ranks, point)
+## Everyone (or just `only`) to `point`, each to a place of his own in the
+## formation there, so the ranks stand still instead of shoving for one spot.
+func rally(point: Vector2, only: Array[Unit] = []) -> void:
+	var ranks := _who(only)
+	var places := formation(ranks, point)
 	for i in ranks.size():
 		ranks[i].set_rally(places[i])
 
-func attack_move(point: Vector2) -> void:
-	var ranks := alive()
-	var places := _deal(ranks, point)
+func attack_move(point: Vector2, only: Array[Unit] = []) -> void:
+	var ranks := _who(only)
+	var places := formation(ranks, point)
 	for i in ranks.size():
 		ranks[i].set_attack_move(places[i])
 
-## Places for `ranks` round `point`, in the same order as `ranks`. Those in
-## front take the far places and those behind the near ones, so nobody has to
-## get through men already standing to reach his own.
-func _deal(ranks: Array[Unit], point: Vector2) -> Array[Vector2]:
-	var places := places_near(point, ranks.size(), [])
+## Stand where they are: `tight` holds the ground, chasing nobody far.
+func stop(only: Array[Unit], tight: bool) -> void:
+	for unit in _who(only):
+		unit.hold_here(tight)
+
+## The living among `only`, or everyone for none.
+func _who(only: Array[Unit]) -> Array[Unit]:
+	if only.is_empty():
+		return alive()
+	var standing: Array[Unit] = []
+	for unit in only:
+		if is_instance_valid(unit) and unit.is_alive():
+			standing.append(unit)
+	return standing
+
+# --- formation ------------------------------------------------------------------
+
+## Who stands where, front to back: those who close with the enemy, then the
+## long weapons and the light, then everyone who shoots or casts.
+const MIDDLE := ["spearman", "torchbearer", "scout"]
+const ROW_MIN := 3
+const ROW_MAX := 9
+
+static func rank_of(unit: Unit) -> int:
+	if unit.is_shooter():
+		return 2
+	return 1 if MIDDLE.has(unit.loadout) else 0
+
+## Places for `ranks` at `point`, in the same order as `ranks`: rows across the
+## way they came, facing it, the front row on the point and each rank's rows
+## behind it; within a row, each man takes the place on his own side, so
+## nobody crosses in front of another getting there.
+func formation(ranks: Array[Unit], point: Vector2) -> Array[Vector2]:
+	var dealt: Array[Vector2] = []
+	dealt.resize(ranks.size())
 	if ranks.is_empty():
-		return places
+		return dealt
+	if not is_inside_tree() or not Pen.crowd_mode:
+		dealt.fill(point)
+		return dealt
 	var middle := Vector2.ZERO
 	for unit in ranks:
 		middle += unit.global_position
@@ -51,16 +84,32 @@ func _deal(ranks: Array[Unit], point: Vector2) -> Array[Vector2]:
 	var along := (point - middle).normalized()
 	if along == Vector2.ZERO:
 		along = Vector2.RIGHT
-	var order := range(ranks.size())
-	order.sort_custom(func(a: int, b: int) -> bool:
-		return ranks[a].global_position.dot(along) > ranks[b].global_position.dot(along))
-	var deep := places.duplicate()
-	deep.sort_custom(func(a: Vector2, b: Vector2) -> bool:
-		return a.dot(along) > b.dot(along))
-	var dealt: Array[Vector2] = []
-	dealt.resize(ranks.size())
-	for i in order.size():
-		dealt[order[i]] = deep[i]
+	var across := Vector2(-along.y, along.x)
+	var width := clampi(ceili(sqrt(float(ranks.size())) * 1.6), ROW_MIN, ROW_MAX)
+	# the men of each rank, then their rows
+	var by_rank := [[], [], []]
+	for i in ranks.size():
+		by_rank[rank_of(ranks[i])].append(i)
+	var taken: Array[Vector2] = []
+	var row := 0
+	for members: Array in by_rank:
+		var start := 0
+		while start < members.size():
+			var in_row: Array = members.slice(start, start + width)
+			var spots: Array[Vector2] = []
+			for c in in_row.size():
+				var offset := float(c) - float(in_row.size() - 1) * 0.5
+				var spot := point - along * float(row) * SPACING.y + across * offset * SPACING.x
+				# a spot in a wall or on a doorstep: the nearest free one instead
+				spots.append(places_near(spot, 1, taken)[0])
+			in_row.sort_custom(func(a: int, b: int) -> bool:
+				return ranks[a].global_position.dot(across) < ranks[b].global_position.dot(across))
+			spots.sort_custom(func(a: Vector2, b: Vector2) -> bool:
+				return a.dot(across) < b.dot(across))
+			for c in in_row.size():
+				dealt[in_row[c]] = spots[c]
+			start += width
+			row += 1
 	return dealt
 
 ## A free place round `point` for one more man (a new recruit), clear of

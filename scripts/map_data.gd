@@ -11,6 +11,10 @@ extends Resource
 @export var gold_positions: Array[Vector2] = []
 ## Great rocks that nothing can be done with but walk round: walls of a gorge.
 @export var boulder_positions: Array[Vector2] = []
+## Lakes and rivers (Water): outlines in field coordinates, and the planks
+## (Bridge) laid over any gap in a river.
+@export var water: Array[PackedVector2Array] = []
+@export var bridges: Array[Rect2] = []
 ## How long a felled tree takes to grow back, and a spent seam to refill; 0 is never.
 ## How rich the seams are and how much a tree gives: rocks per seam, each rock's
 ## worth, beams per tree.

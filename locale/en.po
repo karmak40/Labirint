@@ -1174,9 +1174,6 @@ msgstr "AI against AI"
 msgid "Достижения"
 msgstr "Achievements"
 
-msgid "Язык"
-msgstr "Language"
-
 msgid "Тестовый стенд"
 msgstr "Testbed"
 
@@ -1204,8 +1201,6 @@ msgstr "Room %d"
 msgid "закрыта"
 msgstr "locked"
 
-msgid "Сначала пройдите комнату %d"
-msgstr "First clear room %d"
 
 msgid "★ победа   ★ быстрее %d мин   ★ крепость цела хотя бы на %d%%"
 msgstr "★ victory   ★ in under %d min   ★ fortress at least %d%% whole"
@@ -1251,3 +1246,230 @@ msgstr "★ victory   ★ fortress at least %d%% whole   ★ at least %d%%"
 
 msgid "Противник: орда без крепости, сложность меняет размер волн"
 msgstr "Enemy: a horde without a fortress; the difficulty changes the size of the waves"
+
+msgid "Дом"
+msgstr "House"
+
+msgid "Крыша ещё для восьми человек: без домов замок вмещает пятнадцать, и больше никого не нанять."
+msgstr "A roof for eight more people: without houses the castle holds fifteen, and nobody more can be hired."
+
+msgid "Рынок"
+msgstr "Market"
+
+msgid "Обмен ресурсов: всегда с потерей, зато выручит, когда одно кончилось. Один на сторону."
+msgstr "Trades one resource for another: always at a loss, but a lifesaver when one runs out. One per side."
+
+msgid "Рынок уже есть"
+msgstr "There is already a market"
+
+msgid "Нет места: постройте дом"
+msgstr "No room: build a house"
+
+
+
+
+
+
+
+
+
+
+
+
+msgid "Нужен рынок. Обмен всегда с потерей."
+msgstr "Needs a market. A trade always loses something."
+
+msgid "Нужен рынок"
+msgstr "A market is needed"
+
+msgid "рынок"
+msgstr "market"
+
+msgid "построен"
+msgstr "built"
+
+msgid "Население: сколько людей и сколько мест. Места дают замок и дома."
+msgstr "Population: how many people and how much room. The castle and houses give room."
+
+msgid "Отдать %d дерева и получить %d руды."
+msgstr "Give %d wood and get %d ore."
+
+msgid "Отдать %d руды и получить %d дерева."
+msgstr "Give %d ore and get %d wood."
+
+msgid "Отдать %d дерева и получить %d золота."
+msgstr "Give %d wood and get %d gold."
+
+msgid "Отдать %d руды и получить %d золота."
+msgstr "Give %d ore and get %d gold."
+
+msgid "Отдать %d золота и получить %d дерева."
+msgstr "Give %d gold and get %d wood."
+
+msgid "Отдать %d золота и получить %d руды."
+msgstr "Give %d gold and get %d ore."
+
+msgid "Курс плавает: что продаёте, дешевеет, что покупаете, дорожает, а со временем всё возвращается. Обычно: %d."
+msgstr "Prices float: what you sell gets cheaper, what you buy gets dearer, and in time it all comes back. Usually: %d."
+
+msgid "Группа %d очищена"
+msgstr "Group %d cleared"
+
+msgid "Группа %d: %d бойцов"
+msgstr "Group %d: %d soldiers"
+
+msgid "Все"
+msgstr "All"
+
+msgid "Выбрать всю армию"
+msgstr "Pick the whole army"
+
+msgid "Выбрать всех, кто бьётся вблизи"
+msgstr "Pick everyone who fights up close"
+
+msgid "Стрелки"
+msgstr "Shooters"
+
+msgid "Выбрать стрелков и магов"
+msgstr "Pick the shooters and mages"
+
+msgid "Группа %d: нажать — выбрать, дважды — показать. Удержать (или Ctrl+%d) — запомнить выбранных."
+msgstr "Group %d: press to pick, twice to look at it. Hold (or Ctrl+%d) to keep the picked soldiers in it."
+
+msgid "Стой"
+msgstr "Stop"
+
+msgid "Выбранные встают, где стоят"
+msgstr "The picked soldiers stand where they are"
+
+msgid "Держать"
+msgstr "Hold"
+
+msgid "Выбранные держат место и никого не преследуют"
+msgstr "The picked soldiers hold their ground and chase nobody"
+
+msgid "Рамка"
+msgstr "Box"
+
+msgid "Пальцем рисовать рамку выбора вместо движения камеры"
+msgstr "Draw a selection box with a finger instead of moving the camera"
+
+msgid "группа %d"
+msgstr "group %d"
+
+msgid "Отряд: %d"
+msgstr "Squad: %d"
+
+msgid "ПКМ — в атаку, стрелки встают позади. «Стой», «Держать» — над панелью."
+msgstr "Right click to attack; shooters take the back. «Stop» and «Hold» are over the panel."
+
+msgid "Осмотритесь. Камеру двигают клавиши WASD или стрелки, колесо мыши приближает. На телефоне тяните поле пальцем, а двумя пальцами меняйте масштаб."
+msgstr "Look around. WASD or the arrow keys move the camera, and the mouse wheel zooms. On a phone, drag the field with a finger and pinch with two to zoom."
+
+msgid "Щёлкните по своему бойцу: внизу справа откроется его окно — здоровье, оружие, защита. На телефоне коснитесь бойца."
+msgstr "Click one of your soldiers: his window opens at the bottom right — health, weapon, armour. On a phone, tap the soldier."
+
+msgid "Выберите нескольких: зажмите левую кнопку и обведите бойцов рамкой. На телефоне включите «Рамку» над панелью. Кнопки «Все», «Пехота» и «Стрелки» выбирают сразу многих."
+msgstr "Pick several: hold the left button and draw a box round the soldiers. On a phone, turn on «Box» above the panel. «All», «Infantry» and «Shooters» pick many at once."
+
+msgid "Запомните выбранных как группу: Ctrl+1. Клавиша 1 снова выберет их, двойное нажатие покажет. На телефоне удержите кнопку «1»."
+msgstr "Keep the picked soldiers as a group: Ctrl+1. The 1 key picks them again, pressing it twice shows them. On a phone, hold the «1» button."
+
+msgid "Ведите армию вперёд: правый клик по полю (на телефоне долгое касание). Отряд встанет строем: пехота впереди, лучники и маг позади."
+msgstr "Lead the army forward: right click on the field (a long press on a phone). The squad forms up: infantry in front, archers and the mage behind."
+
+msgid "Туман скрывает врага. Лазутчик видит дальше всех: выберите его двойным кликом и пошлите вперёд, пока не покажутся башни."
+msgstr "The fog hides the enemy. The scout sees furthest: pick him with a double click and send him ahead until the towers show."
+
+msgid "Башня бьёт на 150 шагов, а лучник на 220. Выберите стрелков и прикажите им бить башню издалека. Поджигатель жжёт постройки вчетверо быстрее, но в бою слаб."
+msgstr "A tower reaches 150 paces and an archer 220. Pick the shooters and have them hit the tower from afar. The torchbearer burns buildings four times faster but is weak in a fight."
+
+msgid "Маг сам лечит раненых рядом с собой. Держите его позади строя, и потрёпанные бойцы снова встанут в строй."
+msgstr "The mage heals the wounded near him by himself. Keep him behind the line, and battered soldiers will stand in the ranks again."
+
+msgid "На штурм! «В атаку» ведёт всю армию на замок. Разрушьте его — и победа за вами."
+msgstr "Storm it! «Attack» sends the whole army at the castle. Bring it down and the victory is yours."
+
+msgid "Дальше"
+msgstr "Next"
+
+msgid "Пропустить этот шаг"
+msgstr "Skip this step"
+
+msgid "Скрыть"
+msgstr "Hide"
+
+msgid "Убрать обучение до конца боя"
+msgstr "Put the lessons away until the battle ends"
+
+msgid "Обучение · шаг %d из %d"
+msgstr "Training · step %d of %d"
+
+msgid "Готово!"
+msgstr "Done!"
+
+msgid "Обучение"
+msgstr "Training"
+
+msgid "Сначала пройдите: %s"
+msgstr "First complete: %s"
+
+msgid "★ победа   ★ быстрее %d мин   ★ в живых хотя бы %d%% армии"
+msgstr "★ victory   ★ within %d min   ★ at least %d%% of the army alive"
+
+msgid "Учебный штурм"
+msgstr "Training Assault"
+
+msgid "Небольшой отряд стоит у края долины, а за туманом — вражеский замок с двумя башнями и защитниками. Здесь вы научитесь выбирать бойцов, собирать их в группы и строить отряд, разведывать, сносить башни и брать крепость штурмом. Подсказки появятся по ходу боя."
+msgstr "A small company stands at the edge of the valley, and beyond the fog lies an enemy castle with two towers and defenders. Here you will learn to pick soldiers, keep them in groups and form them up, scout, bring down towers and storm a stronghold. Hints will appear as the battle goes on."
+
+msgid "Разрушить вражеский замок."
+msgstr "Destroy the enemy castle."
+
+msgid "Разведка боем"
+msgstr "Raid in Force"
+
+msgid "Денег и замка нет — только небольшой отряд с магом-целителем. По пути стоят три лагеря разбойников: разгромите лагерь, и пленные присоединятся к вам. За туманом — вражеская крепость. Её стережёт вождь со своими телохранителями: он намного сильнее любого бойца, так что берегите отряд и не лезьте к нему поодиночке."
+msgstr "There is no money and no castle, only a small company with a healing mage. Three bandit camps lie along the way: break a camp and its prisoners will join you. Beyond the fog stands the enemy stronghold, guarded by a chieftain and his bodyguard. He is far stronger than any single soldier, so look after your company and never go at him one at a time."
+
+msgid "Разгромить лагеря и разрушить вражескую крепость."
+msgstr "Break the camps and destroy the enemy stronghold."
+
+msgid "Вождь"
+msgstr "Chieftain"
+
+msgid "Лагерей разгромлено: %d из %d"
+msgstr "Camps broken: %d of %d"
+
+msgid "Лагерь разбойников разгромлен!"
+msgstr "The bandit camp is broken!"
+
+msgid "Пленные освобождены: к вам присоединились бойцы (%d)"
+msgstr "Prisoners freed: soldiers joined you (%d)"
+
+msgid "Вождь пал! Его люди растеряны"
+msgstr "The chieftain has fallen! His men are in disarray"
+
+msgid "Карта"
+msgstr "Map"
+
+msgid "Долина"
+msgstr "Valley"
+
+msgid "Озёрный лес"
+msgstr "Lake Forest"
+
+msgid "У моста"
+msgstr "At the Bridge"
+
+msgid "Открытая долина: прямая дорога между замками и золото посередине."
+msgstr "An open valley: a straight road between the castles and gold in the middle."
+
+msgid "Посреди долины лежит большое озеро, а вдоль берегов густой лес. Пройти можно только южным берегом, там и сойдутся армии."
+msgstr "A great lake lies in the middle of the valley, with thick forest along its shores. The only way through is the south shore, and that is where the armies will meet."
+
+msgid "Широкая река делит долину пополам, и перейти её можно только по мосту посередине. Кто удержит мост, тот и хозяин долины."
+msgstr "A wide river splits the valley in two, and the only way across is the bridge in the middle. Whoever holds the bridge holds the valley."
+
+msgid "Тут вода"
+msgstr "Water here"

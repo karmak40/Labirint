@@ -85,6 +85,9 @@ func _on_touch(touch: InputEventScreenTouch) -> void:
 		return
 	if fingers.is_empty():
 		dragging_ghost = false
+		if adapter != null and adapter.box_mode and finger.moved:
+			adapter.box_finish()
+			return
 		if not touch.canceled and not finger.moved and not finger.spent and adapter != null:
 			adapter.tap(touch.position)
 	elif fingers.size() == 1:
@@ -127,6 +130,13 @@ func _on_drag(drag: InputEventScreenDrag) -> void:
 			camera.zoom_about(pinch_zoom * pair[0].distance_to(pair[1]) / pinch_span, mid)
 			camera.pan_by(mid - pinch_mid)
 		pinch_mid = mid
+		return
+	# with «Рамка» on, one finger draws a box instead of moving the camera
+	if adapter != null and adapter.box_mode and not dragging_ghost:
+		if finger.moved or finger.start.distance_to(finger.at) > SLOP:
+			finger.moved = true
+			adapter.show_hold(Vector2.INF, 0.0)
+			adapter.box_drag(finger.start, finger.at)
 		return
 	if not finger.moved:
 		if finger.start.distance_to(finger.at) <= SLOP:

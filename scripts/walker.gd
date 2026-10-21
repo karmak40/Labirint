@@ -614,6 +614,44 @@ const FAR_COLOR := Color(0.62, 0.64, 0.68)
 ## draw call per stroke, so a scene with many of them can switch it off and let the
 ## viewport's MSAA smooth the edges instead. On by default: the testbed is unchanged.
 var smooth_lines := true
+
+# Detail that only a match gets (the testbed draws its figure as it always did):
+# boots that roll through the step, a belt and a tunic in the side's colour, an
+# eye, loose things (plume, hem) that lag the body and swing past, panting when
+# the wind is gone, and a streak behind a fast blow.
+var dressed := Pen.crowd_mode
+const BOOT := Color(0.30, 0.23, 0.17)
+const BOOT_EDGE := Color(0.17, 0.13, 0.10)
+const BOOT_FAR := Color(0.21, 0.17, 0.13)
+const BOOT_LENGTH := 9.0           # heel to toe
+const BOOT_BALL := 5.5             # the ball of the foot, ahead of the ankle
+const BOOT_CUFF := 6.0             # how far up the shin the boot comes
+const TOE_OFF := 0.62              # heel rises this far (rad) as the foot leaves the ground
+const TOE_UP := -0.34              # and the toe is lifted to meet it again
+const TUNIC_MIX := 0.55            # how much of the side's colour the tunic takes
+const TUNIC_SHOULDER := 5.2
+const TUNIC_WAIST := 5.8
+const TUNIC_HEM := 10.5
+const BELT := Color(0.27, 0.19, 0.12)
+const BUCKLE := Color(0.86, 0.70, 0.30)
+const EYE := Color(0.12, 0.13, 0.17)
+const SWAY_K := 130.0              # the spring that brings loose things back
+const SWAY_D := 8.0                # and how quickly they stop swinging
+const PANT_START := 0.55           # below this share of wind he starts to labour
+const PANT_PERIOD := 1.25          # seconds per breath when spent
+const PANT_BOOST := 2.4            # how much deeper the chest goes
+const PANT_SLUMP := 2.0            # shoulders drop forward
+const TRAIL_LIFE := 0.16           # seconds a streak behind a blow lasts
+const TRAIL_MAX := 9
+const TRAIL_STEEL := Color(0.92, 0.96, 1.0)
+const TRAIL_FIRE := Color(1.0, 0.62, 0.20)
+const FINE_LIMIT := 70             # past this many figures the small details are left out
+static var figures := 0            ## rigs alive, to decide how much detail a crowd can afford
+var sway := 0.0                    ## how far loose things trail behind, 1 at a run
+var sway_v := 0.0
+var tired := 0.0                   ## 0 fresh to 1 spent
+var breath_phase := 0.0
+var swing_trail: Array = []        ## [position in the figure's frame, age]
 ## Gather the whole figure into one triangle list and draw it in one call (Pen)
 ## instead of stroke by stroke. Off by default, which is the testbed exactly as
 ## it was; a crowd of figures turns it on and smooths edges with MSAA instead.
@@ -695,6 +733,12 @@ const HEAD_EASE := 24.0
 const MIN_TURN_SCALE := 0.3       # figure never collapses fully while turning
 
 @onready var player: PlayerBody = get_parent() as PlayerBody
+
+func _enter_tree() -> void:
+	figures += 1
+
+func _exit_tree() -> void:
+	figures -= 1
 
 func _ready() -> void:
 	# Dropped weapons lie in the rig that dropped them, so a rig that cannot be
@@ -968,6 +1012,7 @@ func _process(delta: float) -> void:
 		player.take_hold()
 
 	_update_idle(delta)
+	_update_detail(delta)
 	_update_pose(delta)
 
 	_update_rock(progress)
@@ -1117,7 +1162,70 @@ func _update_glance(delta: float) -> void:
 	head_idle = Vector2(glance_dir * GLANCE_REACH, -GLANCE_RISE) * swell
 
 func _breath() -> float:
-	return sin(idle_time * TAU / BREATH_PERIOD) * idle_weight
+	# a spent man breathes fast and deep, and does not stop for walking
+	var weight := lerpf(idle_weight, 1.0, tired)
+	return sin(breath_phase * TAU) * weight * (1.0 + tired * PANT_BOOST)
+
+## The loose things, the wind and the streak behind a blow: all of it presentation.
+func _update_detail(delta: float) -> void:
+	if not dressed:
+		return
+	# plume and hem trail the body as it speeds up, and swing past when it stops
+	var along := player.velocity.x * player.facing_x
+	var target := clampf(along / RUN_SPEED, -0.6, 1.0) * (1.0 - death_amount)
+	sway_v += ((target - sway) * SWAY_K - sway_v * SWAY_D) * delta
+	sway += sway_v * delta
+	# wind: only a fraction of it left shows
+	var ratio := clampf(player.stamina / PlayerBody.STAMINA_MAX, 0.0, 1.0)
+	var spent := smoothstep(0.0, 1.0, clampf((PANT_START - ratio) / PANT_START, 0.0, 1.0)) * (1.0 - death_amount)
+	tired = _ease(tired, spent, 2.5, delta)
+	breath_phase = fposmod(breath_phase + delta / lerpf(BREATH_PERIOD, PANT_PERIOD, tired), 1.0)
+	_update_trail(delta)
+
+## How far from the grip the business end of the weapon is: where a streak starts.
+func _trail_reach() -> float:
+	match player.weapon:
+		PlayerBody.Weapon.SWORD, PlayerBody.Weapon.SWORD_SHIELD:
+			return SWORD_BLADE
+		PlayerBody.Weapon.GREATSWORD:
+			return GREAT_BLADE
+		PlayerBody.Weapon.DAGGER:
+			return DAGGER_BLADE
+		PlayerBody.Weapon.TORCH:
+			return TORCH_STICK
+		PlayerBody.Weapon.CLUB:
+			return CLUB_LENGTH
+		PlayerBody.Weapon.HAMMER:
+			return HAMMER_HAFT
+		PlayerBody.Weapon.AXE:
+			return AXE_HANDLE
+	return 0.0
+
+func _update_trail(delta: float) -> void:
+	for i in range(swing_trail.size() - 1, -1, -1):
+		swing_trail[i][1] += delta
+		if swing_trail[i][1] > TRAIL_LIFE:
+			swing_trail.remove_at(i)
+	var reach := _trail_reach()
+	if reach <= 0.0 or player.is_dead or strike_amount < 0.35 or not player.is_striking():
+		return
+	var tip := weapon_grip + weapon_dir * reach
+	if swing_trail.is_empty() or (swing_trail[swing_trail.size() - 1][0] as Vector2).distance_to(tip) > 3.0:
+		swing_trail.append([tip, 0.0])
+		if swing_trail.size() > TRAIL_MAX:
+			swing_trail.remove_at(0)
+
+## The streak a fast blow leaves: the tip's last positions, fading as they age.
+func _draw_trail() -> void:
+	if swing_trail.size() < 2 or figures >= FINE_LIMIT:
+		return
+	var color := TRAIL_FIRE if player.weapon == PlayerBody.Weapon.TORCH else TRAIL_STEEL
+	for i in range(swing_trail.size() - 1):
+		var a: Array = swing_trail[i]
+		var b: Array = swing_trail[i + 1]
+		var fade := 1.0 - clampf(float(b[1]) / TRAIL_LIFE, 0.0, 1.0)
+		var along := float(i + 1) / float(swing_trail.size())
+		_w_line(a[0], b[0], Color(color.r, color.g, color.b, 0.5 * fade * along), lerpf(0.8, 2.8, along) * (0.5 + 0.5 * fade), smooth_lines)
 
 func _update_pose(delta: float) -> void:
 	var lift := Vector2(0.0, -player.air_height)
@@ -1133,7 +1241,7 @@ func _update_pose(delta: float) -> void:
 		-_hip_height(near_off, far_off, delta)
 	)
 	shoulder = hip + Vector2(
-		lean_amount * move_amount * travel + _swing_lean() + recoil * HIT_RECOIL + jolt,
+		lean_amount * move_amount * travel + _swing_lean() + recoil * HIT_RECOIL + jolt + tired * PANT_SLUMP,
 		-SHOULDER_ABOVE_HIP * lerpf(1.0, CROUCH_TORSO, crouch_amount) - breath * BREATH_RISE
 	)
 
@@ -1227,7 +1335,7 @@ func _update_pose(delta: float) -> void:
 	# ripples up the body instead of moving as one rigid piece
 	var ideal_head := shoulder + Vector2(
 		lean_amount * move_amount * travel * 0.5 + head_whip + head_idle.x * idle_weight,
-		-HEAD_ABOVE_SHOULDER + head_idle.y * idle_weight - breath * BREATH_HEAD
+		-HEAD_ABOVE_SHOULDER + head_idle.y * idle_weight - breath * BREATH_HEAD + tired * 1.4
 	)
 	if pose_started:
 		head = head.lerp(ideal_head, 1.0 - exp(-HEAD_EASE * delta))
@@ -2566,11 +2674,17 @@ func _draw() -> void:
 		_stroke_armour(near_color)
 	else:
 		_w_line(hip, shoulder, near_color, LIMB_WIDTH, smooth_lines)
+		if dressed:
+			_stroke_tunic(flash)
 	_w_circle(head, HEAD_RADIUS, near_color)
 	if player.helm != PlayerBody.Helm.NONE:
 		_stroke_helm(helm_at, near_color)
+		if player.plumed:
+			_stroke_plume(helm_at)
 	elif player.hooded:
 		_stroke_hood()
+	elif dressed:
+		_stroke_face()
 
 	# the shield is carried in front of the chest, so it covers the torso but
 	# stays behind the weapon arm; it is strapped on and never dropped
@@ -2578,12 +2692,18 @@ func _draw() -> void:
 		_stroke_shield(far_hand)
 
 	_draw_limb(hip, near_foot, THIGH, SHIN, 1.0, near_color, limb)
+	if dressed:
+		_stroke_boot(near_foot, phase, BOOT, limb, 1.0)
+		_stroke_boot(far_foot, phase + 0.5, BOOT_FAR, limb, -1.0)
+		_stroke_hem(flash)
 	_draw_limb(shoulder, near_hand, UPPER_ARM, FOREARM, -1.0, near_color, limb)
 	if armoured:
 		_stroke_pauldron(near_color)
 	# hands full of rock means nothing is in them to draw
 	if not player.is_carrying():
 		_stroke_weapon(weapon_grip, weapon_dir, player.weapon)
+		if dressed:
+			_draw_trail()
 
 	_w_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
@@ -2727,8 +2847,124 @@ func _stroke_helm(at: Vector2, near_color: Color) -> void:
 	_w_line(at + across * HELM_WIDE * 0.15 + lean * 1.0,
 		at + across * HELM_WIDE * 0.95 + lean * 1.0, VISOR_COLOR, 2.4, smooth_lines)
 	# and a crest, because a helm in silhouette needs something on top of it
-	_w_line(at + lean * HELM_TALL * 0.45, at + lean * (HELM_TALL * 0.45 + 7.0),
+	var crest_back := across * (-sway * 3.0) if dressed else Vector2.ZERO
+	_w_line(at + lean * HELM_TALL * 0.45, at + lean * (HELM_TALL * 0.45 + 7.0) + crest_back,
 		PLUME_COLOR, 3.0, smooth_lines)
+
+## A chieftain's plume: a tall crimson fan rising from the crest and streaming
+## back over the shoulders, with a gold band at its root.
+const CHIEF_PLUME := Color(0.80, 0.10, 0.12)
+const CHIEF_PLUME_EDGE := Color(0.42, 0.04, 0.06)
+const CHIEF_BAND := Color(0.95, 0.78, 0.25)
+
+func _stroke_plume(at: Vector2) -> void:
+	var lean := helm_lean
+	var ahead := Vector2(-lean.y, lean.x)
+	var root := at + lean * HELM_TALL * 0.45
+	# the plume streams back as he runs, and swings past when he stops
+	var drag := ahead * (-sway * 9.0) if dressed else Vector2.ZERO
+	var fan := PackedVector2Array([
+		root - ahead * 2.5,
+		root + ahead * 2.5,
+		root + lean * 13.0 + ahead * 1.5 + drag * 0.4,
+		root + lean * 24.0 - ahead * 5.0 + drag,
+		root + lean * 22.0 - ahead * 13.0 + drag * 1.3,
+		root + lean * 11.0 - ahead * 17.0 + drag * 0.9,
+		root + lean * 2.0 - ahead * 9.0,
+	])
+	_w_polygon(fan, CHIEF_PLUME)
+	var rim := fan.duplicate()
+	rim.append(fan[0])
+	_w_polyline(rim, CHIEF_PLUME_EDGE, 1.1, smooth_lines)
+	# feather lines, and the band where it is set into the crest
+	_w_line(root + lean * 4.0 - ahead * 2.0, root + lean * 20.0 - ahead * 9.0, CHIEF_PLUME_EDGE, 1.0, smooth_lines)
+	_w_line(root + lean * 2.0 - ahead * 3.0, root + lean * 11.0 - ahead * 14.0, CHIEF_PLUME_EDGE, 1.0, smooth_lines)
+	_w_line(root - ahead * 3.0, root + ahead * 3.0, CHIEF_BAND, 2.6, smooth_lines)
+
+## How the foot sits through the step, in radians with a toe pointing down
+## positive. Flat while it carries the weight, then the heel comes up as the
+## weight rolls onto the ball, and through the swing the toe starts down, is
+## lifted to clear the ground and is set flat again to land.
+func _foot_angle(p: float) -> float:
+	p = fposmod(p, 1.0)
+	var angle := 0.0
+	if p < stance_fraction:
+		angle = smoothstep(0.72, 1.0, p / stance_fraction) * TOE_OFF
+	else:
+		var u := (p - stance_fraction) / (1.0 - stance_fraction)
+		angle = lerpf(TOE_OFF, TOE_UP, smoothstep(0.0, 0.75, u))
+		angle = lerpf(angle, 0.0, smoothstep(0.75, 1.0, u))
+	# only a walking foot rolls; a standing one is flat, one in the air hangs
+	angle *= move_amount
+	angle = lerpf(angle, 0.45, air_amount)
+	return lerpf(angle, 0.25, death_amount)
+
+## A boot on the end of a leg: a sole from heel to toe turning on the ball of
+## the foot, and a cuff up the shin. `tip` is where the stick leg ends.
+func _stroke_boot(tip: Vector2, p: float, color: Color, limb_width: float, side: float) -> void:
+	var angle := _foot_angle(p)
+	var ball := tip + Vector2(BOOT_BALL, 1.0)
+	var along := Vector2.from_angle(angle)
+	var heel := ball - along * (BOOT_LENGTH - 3.0)
+	var toe := ball + along * 3.0
+	var shin := Gait.joint(hip, tip, THIGH, SHIN, 1.0)
+	var up := (shin - tip).normalized()
+	var width := 3.6 * (limb_width / LIMB_WIDTH)
+	_w_line(heel, toe, BOOT_EDGE, width + 1.6, smooth_lines)
+	_w_line(heel, toe, color, width, smooth_lines)
+	_w_line(tip, tip + up * BOOT_CUFF, BOOT_EDGE, limb_width + 2.4, smooth_lines)
+	_w_line(tip, tip + up * BOOT_CUFF, color, limb_width + 1.2, smooth_lines)
+
+## What the torso wears: a tunic in the side's colour, belted.
+func _tunic_color(flash: float) -> Color:
+	return NEAR_COLOR.lerp(Team.color(player.team), TUNIC_MIX).lerp(Color.WHITE, flash)
+
+func _stroke_tunic(flash: float) -> void:
+	var along := shoulder - hip
+	var up := along.normalized() if along.length() > 0.01 else Vector2.UP
+	var side := Vector2(up.y, -up.x)
+	var cloth := _tunic_color(flash)
+	var body := PackedVector2Array([
+		shoulder + side * TUNIC_SHOULDER,
+		shoulder - side * TUNIC_SHOULDER,
+		hip - side * TUNIC_WAIST,
+		hip + side * TUNIC_WAIST,
+	])
+	_w_polygon(body, cloth)
+	# a seam down the front, so the cloth has a front
+	if figures < FINE_LIMIT:
+		_w_line(shoulder - up * 3.0 - side * 1.2, hip + up * 3.0 - side * 1.2, cloth.darkened(0.22), 1.0, smooth_lines)
+
+## The skirt of the tunic and the belt over its top, drawn after the near leg so
+## they lie over the thighs. The hem trails behind with the body and swings.
+func _stroke_hem(flash: float) -> void:
+	var cloth := _tunic_color(flash)
+	var swing := sway
+	var flutter := sin(glow_time * 17.0) * 0.5 * absf(swing)
+	var skirt := PackedVector2Array([
+		hip + Vector2(TUNIC_WAIST, 0.0),
+		hip + Vector2(TUNIC_WAIST + 0.6 - swing * 1.2, TUNIC_HEM - swing * 0.8 + flutter),
+		hip + Vector2(0.0 - swing * 3.2, TUNIC_HEM + 1.5 + flutter * 0.5),
+		hip + Vector2(-TUNIC_WAIST - 0.8 - swing * 5.5, TUNIC_HEM - swing * 2.2 - flutter),
+		hip + Vector2(-TUNIC_WAIST, 0.0),
+	])
+	_w_polygon(skirt, cloth.darkened(0.08))
+	if figures < FINE_LIMIT:
+		_w_polyline(skirt, cloth.darkened(0.30), 1.0, smooth_lines)
+	var belt_a := hip + Vector2(-TUNIC_WAIST - 0.4, -1.2)
+	var belt_b := hip + Vector2(TUNIC_WAIST + 0.4, -1.2)
+	_w_line(belt_a, belt_b, BELT, 2.6, smooth_lines)
+	_w_circle(hip + Vector2(TUNIC_WAIST * 0.45, -1.2), 1.5, BUCKLE)
+
+## A bare head gets an eye on the side it faces; with the glance it follows.
+func _stroke_face() -> void:
+	var up := helm_lean
+	var ahead := Vector2(-up.y, up.x)
+	var eye := head + ahead * (HEAD_RADIUS * 0.46 + head_idle.x * idle_weight * 0.25) + up * 1.4
+	_w_circle(eye, 1.35, EYE)
+	# the brow, to give it a look
+	if figures < FINE_LIMIT:
+		_w_line(eye - ahead * 1.2 + up * 2.3, eye + ahead * 2.0 + up * 2.0, EYE, 0.8, smooth_lines)
 
 ## A cowl pulled forward over the head, its point hanging down the back, the
 ## face lost in its shadow, and a short mantle over the shoulders.

@@ -36,6 +36,9 @@ func _process(delta: float) -> void:
 	if side != null and side.researching != "" and is_complete():
 		queue_redraw()
 
+func debris_colors() -> Array[Color]:
+	return [STONE, STONE_DARK, ROOF]
+
 func _draw_standing() -> void:
 	var w := footprint.x * 0.5 + 6.0
 	var foot := footprint.y * 0.5

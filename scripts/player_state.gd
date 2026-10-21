@@ -106,6 +106,7 @@ func research_share() -> float:
 	return clampf(1.0 - research_left / total, 0.0, 1.0)
 
 func _physics_process(delta: float) -> void:
+	_settle_prices(delta)
 	_supply_left -= delta
 	if _supply_left <= 0.0:
 		_supply_left = SUPPLY_EVERY
@@ -486,6 +487,8 @@ func order_problem(kind: String) -> String:
 		return "Казарма строится"
 	if drafts.size() >= DRAFT_MAX:
 		return "Слишком много заказов"
+	if not room_for():
+		return "Нет места: постройте дом"
 	if not missing_for(kind).is_empty() and forges().is_empty():
 		return "Нет кузницы"
 	if not economy.can_afford(draft_price(kind)):
@@ -666,6 +669,112 @@ func workers() -> Array[Worker]:
 		if hand != null and hand.team == team and hand.is_alive() and hand.job != "recruit":
 			found.append(hand)
 	return found
+
+# --- a scout --------------------------------------------------------------------
+
+## The soldier sent to look round, while one is out.
+var scout_unit: Unit = null
+
+## Sends one soldier to `point`, fighting whatever it meets: the one already
+## out if there is one, else the fastest in the ranks, nearest home. False
+## with nobody to send.
+func scout(point: Vector2) -> bool:
+	if scout_unit == null or not is_instance_valid(scout_unit) or not scout_unit.is_alive():
+		scout_unit = null
+		var home := base().global_position if base() != null else point
+		for unit in squad.alive():
+			if scout_unit == null or unit.speed > scout_unit.speed + 1.0 \
+					or (absf(unit.speed - scout_unit.speed) <= 1.0 and unit.global_position.distance_squared_to(home) < scout_unit.global_position.distance_squared_to(home)):
+				scout_unit = unit
+	if scout_unit == null:
+		return false
+	scout_unit.set_attack_move(point)
+	return true
+
+## Brings the scout back to the rally point.
+func recall_scout() -> void:
+	if scout_unit != null and is_instance_valid(scout_unit) and scout_unit.is_alive() and rally_point != Vector2.INF:
+		scout_unit.set_rally(squad.place_for(scout_unit, rally_point))
+	scout_unit = null
+
+# --- population and houses ------------------------------------------------------
+
+## Everyone needs a roof: the castle houses POP_BASE, each finished house
+## POP_HOUSE more, never above POP_MAX however many are built. A side with no
+## castle on the field (a horde) is not counted at all.
+const POP_BASE := 15
+const POP_HOUSE := 8
+const POP_MAX := 100
+
+## Everyone this side has or is taking on: labourers and recruits on their
+## feet, soldiers in the ranks, and every one still in a queue.
+func population() -> int:
+	var count := squad.alive().size()
+	for node in get_tree().get_nodes_in_group("workers"):
+		var hand := node as Worker
+		if hand != null and hand.team == team and hand.is_alive():
+			count += 1
+	for building in buildings:
+		if building is ProductionBuilding and is_instance_valid(building) and building.is_alive():
+			count += (building as ProductionBuilding).queue.size()
+	return count
+
+## How many it has roofs for.
+func pop_cap() -> int:
+	var keep := base()
+	if keep == null:
+		return POP_MAX
+	var cap := POP_BASE if keep.is_alive() else 0
+	for building in buildings:
+		if building is House and is_instance_valid(building) and building.is_alive() and building.is_complete():
+			cap += POP_HOUSE
+	return mini(cap, POP_MAX)
+
+## Whether `more` could be taken on without more houses.
+func room_for(more: int = 1) -> bool:
+	return base() == null or population() + more <= pop_cap()
+
+## Houses of ours standing or going up.
+func house_sites() -> int:
+	var count := 0
+	for building in buildings:
+		if building is House and is_instance_valid(building) and building.is_alive():
+			count += 1
+	return count
+
+# --- the market ---------------------------------------------------------------
+
+## Our finished market, if one stands.
+func market() -> Market:
+	_claim_field()
+	for building in buildings:
+		if building is Market and is_instance_valid(building) and building.is_alive() and building.is_complete():
+			return building
+	return null
+
+func has_market_site() -> bool:
+	for building in buildings:
+		if building is Market and is_instance_valid(building) and building.is_alive():
+			return true
+	return false
+
+## What each good fetches at our market just now (Market.BASE_PRICE to start).
+var prices: Dictionary = Market.BASE_PRICE.duplicate()
+
+## One deal at our market (Market.DEALS). False, and nothing taken, if it can not.
+func trade(deal: String) -> bool:
+	var stall := market()
+	return stall != null and stall.trade(deal, economy, prices)
+
+## What a deal would give at our prices now.
+func quote(deal: String) -> Dictionary:
+	return Market.quote(deal, prices)
+
+## The prices drift back to where they settle.
+func _settle_prices(delta: float) -> void:
+	for good in prices:
+		var base := float(Market.BASE_PRICE[good])
+		prices[good] = lerpf(float(prices[good]), base, minf(1.0, Market.RECOVER * delta))
 
 func base() -> Base:
 	_claim_field()

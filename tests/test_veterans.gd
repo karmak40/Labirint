@@ -30,6 +30,9 @@ func _click(at_world: Vector2, button: MouseButton) -> void:
 	event.position = root.get_canvas_transform() * at_world
 	event.global_position = event.position
 	root.push_input(event, true)
+	var up := event.duplicate() as InputEventMouseButton
+	up.pressed = false
+	root.push_input(up, true)
 
 func _key(code: Key) -> void:
 	var event := InputEventKey.new()

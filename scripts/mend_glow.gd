@@ -15,6 +15,7 @@ var source := Vector2.ZERO     ## where the staff was, in world space
 var age := 0.0
 
 func _ready() -> void:
+	add_to_group("mend_glows")
 	z_index = 5
 	if is_instance_valid(patient):
 		global_position = patient.global_position

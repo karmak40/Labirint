@@ -71,6 +71,19 @@ func _draw_shadow() -> void:
 	draw_circle(Vector2.ZERO, WALL_HALF + 50.0, SHADOW)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
+## Where a blow shows: the curtain wall, the two corner towers and the keep.
+func damage_faces() -> Array[Rect2]:
+	var foot := _front()
+	var faces: Array[Rect2] = [Rect2(-WALL_HALF, foot - WALL_TALL, WALL_HALF * 2.0, WALL_TALL)]
+	for side in [-1.0, 1.0]:
+		var x: float = side * (WALL_HALF - 4.0)
+		faces.append(Rect2(x - TOWER_HALF, foot - TOWER_TALL, TOWER_HALF * 2.0, TOWER_TALL - WALL_TALL))
+	faces.append(Rect2(-KEEP_HALF, foot - KEEP_TALL, KEEP_HALF * 2.0, KEEP_TALL - WALL_TALL))
+	return faces
+
+func debris_colors() -> Array[Color]:
+	return [STONE, STONE_LIT, STONE_DARK]
+
 func _draw_standing() -> void:
 	var foot := _front()
 	var flag := Team.color(team)

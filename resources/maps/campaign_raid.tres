@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="MapData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/map_data.gd" id="MapScript"]
+[ext_resource type="Script" path="res://scripts/side_layout.gd" id="SideScript"]
+
+[sub_resource type="Resource" id="PlayerSide"]
+script = ExtResource("SideScript")
+team = 1
+has_base = false
+rally = Vector2(200, 270)
+start_soldiers = PackedStringArray("knight", "knight", "spearman", "spearman", "archer", "archer", "scout", "mage")
+
+[sub_resource type="Resource" id="EnemySide"]
+script = ExtResource("SideScript")
+team = 2
+base = Vector2(2580, 300)
+barracks = Vector2(2350, 130)
+has_barracks = false
+stockpile = Vector2(2430, 440)
+towers = Array[Vector2]([Vector2(2230, 190), Vector2(2230, 410)])
+rally = Vector2(2420, 300)
+start_soldiers = PackedStringArray("knight", "spearman", "spearman", "spearman", "warrior", "warrior", "archer", "archer", "archer")
+start_stock = {}
+
+[resource]
+script = ExtResource("MapScript")
+title = "Разведка боем"
+floor_size = Vector2(2800, 560)
+tree_positions = Array[Vector2]([Vector2(120, 548), Vector2(164, 512), Vector2(208, 548), Vector2(252, 512), Vector2(296, 548), Vector2(340, 512), Vector2(384, 548), Vector2(428, 512), Vector2(472, 548), Vector2(516, 512), Vector2(560, 548), Vector2(604, 512), Vector2(648, 548), Vector2(692, 512), Vector2(736, 548), Vector2(780, 512), Vector2(824, 548), Vector2(868, 512), Vector2(912, 548), Vector2(956, 512), Vector2(1000, 548), Vector2(1044, 512), Vector2(1088, 548), Vector2(1132, 512), Vector2(1176, 548), Vector2(1220, 512), Vector2(1264, 548), Vector2(1308, 512), Vector2(1352, 548), Vector2(1396, 512), Vector2(1440, 548), Vector2(1484, 512), Vector2(1528, 548), Vector2(1572, 512), Vector2(1616, 548), Vector2(1660, 512), Vector2(1704, 548), Vector2(1748, 512), Vector2(1792, 548), Vector2(1836, 512), Vector2(1880, 548), Vector2(1924, 512), Vector2(1968, 548), Vector2(2012, 512), Vector2(2056, 548), Vector2(2100, 512), Vector2(2144, 548), Vector2(2188, 512), Vector2(2232, 548), Vector2(2276, 512), Vector2(2320, 548), Vector2(2364, 512), Vector2(2408, 548), Vector2(2452, 512), Vector2(2496, 548), Vector2(2540, 512), Vector2(2584, 548), Vector2(2628, 512), Vector2(2672, 548)])
+weather = false
+fog = true
+player = SubResource("PlayerSide")
+enemy = SubResource("EnemySide")
+spawn_points = Dictionary[String, Vector2]({
+"west": Vector2(40, 300)
+})
+camp_positions = Array[Vector2]([Vector2(760, 175), Vector2(1320, 390), Vector2(1800, 170)])
+camp_bandits = PackedStringArray("warrior", "warrior", "spearman", "archer")
+camp_bounty = {}

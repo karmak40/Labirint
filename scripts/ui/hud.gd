@@ -19,12 +19,25 @@ const TABS := [
 	{"title": "Рабочие", "does": "hire", "cards": ["worker", "wood", "ore", "gold", "repair"]},
 	{"title": "Пехота", "does": "hire", "cards": ["warrior", "spearman", "axeman", "swordsman", "greatsword", "knight"]},
 	{"title": "Особые", "does": "hire", "cards": ["archer", "crossbowman", "mage", "scout", "torchbearer"]},
-	{"title": "Постройки", "does": "build", "cards": ["barracks", "tower", "library", "forge"]},
+	{"title": "Постройки", "does": "build", "cards": ["barracks", "tower", "library", "forge", "house", "market"]},
 	{"title": "Кузница", "does": "forge", "cards": ["smith", "helm", "armour", "shield", "arms"]},
 	{"title": "Оружие", "does": "learn", "cards": ["spears", "axes", "blades", "greatswords", "chivalry", "daggers"]},
 	{"title": "Науки", "does": "learn", "cards": ["archery", "crossbows", "fire", "forging", "mail"]},
 	{"title": "Магия", "does": "learn", "cards": ["magic", "healing"]},
+	{"title": "Рынок", "does": "trade", "cards": ["wood_ore", "ore_wood", "wood_gold", "ore_gold", "gold_wood", "gold_ore"]},
 ]
+## The market's deals as cards: what each brings in now, and in words. The
+## numbers move with the prices (Market.quote).
+const GOT_TITLE := {"wood": "+%d дерева", "ore": "+%d руды", "gold": "+%d золота"}
+const DEAL_ABOUT := {
+	"wood_ore": "Отдать %d дерева и получить %d руды.",
+	"ore_wood": "Отдать %d руды и получить %d дерева.",
+	"wood_gold": "Отдать %d дерева и получить %d золота.",
+	"ore_gold": "Отдать %d руды и получить %d золота.",
+	"gold_wood": "Отдать %d золота и получить %d дерева.",
+	"gold_ore": "Отдать %d золота и получить %d руды.",
+}
+const DEAL_HINT := "Курс плавает: что продаёте, дешевеет, что покупаете, дорожает, а со временем всё возвращается. Обычно: %d."
 const NAMES := {
 	"worker": "Рабочий", "wood": "Лес", "ore": "Руда", "gold": "Золото", "repair": "Ремонт",
 	"woodcutter": "Лесоруб", "miner": "Рудокоп", "gold_miner": "Старатель",
@@ -72,6 +85,10 @@ const JOB_NAMES := {"wood": "рубит лес", "ore": "добывает руд
 	"smith": "кузнец у наковальни", "repair": "чинит постройки", "recruit": "новобранец"}
 const SKY_NAMES := {"day": "День", "dusk": "Сумерки", "night": "Ночь", "dawn": "Рассвет"}
 const SKY_ABOUT := "Ночью все видят хуже: бойцы замечают врага на 40% ближе, башни стреляют на 20% ближе.\nВ дождь луки бьют на 30% слабее, арбалеты на 15%, факелы жгут вдвое хуже, и обзор ещё немного меньше."
+## The cards' keys, left to right: the bottom row, since the number keys pick
+## groups and W, A, S, D move the camera.
+const CARD_KEYS := [KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N]
+const CARD_KEY_NAMES := ["Z", "X", "C", "V", "B", "N"]
 const REFRESH := 0.1
 const MESSAGE_TIME := 2.6
 const TOAST_TIME := 3.5
@@ -228,6 +245,7 @@ func _ready() -> void:
 	_build_toast()
 	_build_overlay()
 	_build_unit_panel()
+	_build_squad_bar()
 	_build_card_info()
 	_build_mode_bar()
 	bottom_bar.visible = not GameState.spectating
@@ -241,6 +259,8 @@ func _ready() -> void:
 		input.refused.connect(say)
 	if input != null and input.has_signal("picked"):
 		input.picked.connect(func(_body: PlayerBody) -> void: _refresh_unit())
+		input.chosen_changed.connect(_refresh_unit)
+		input.note.connect(func(text: String) -> void: say(text))
 	if input != null and input.has_signal("mode_changed"):
 		input.mode_changed.connect(_refresh_mode)
 	touch = TouchInput.new()
@@ -270,6 +290,15 @@ func _fit() -> void:
 
 func _on_match_started() -> void:
 	minimap.field = GameState.field()
+	var us := GameState.human()
+	if cards_box != null and us != null:
+		cards_box.visible = us.base() != null
+	# the training room's lessons
+	if Campaign.current >= 0 and bool(Campaign.ROOMS[Campaign.current].get("tutorial", false)) and not GameState.spectating:
+		tutorial = Tutorial.new()
+		tutorial.name = "Tutorial"
+		tutorial.hud = self
+		root.add_child(tutorial)
 	for node in get_tree().get_nodes_in_group("camps"):
 		(node as BanditCamp).cleared.connect(_on_camp_cleared)
 	var sky := GameState.field().get_node_or_null("Weather") as Weather
@@ -283,6 +312,9 @@ func _on_match_started() -> void:
 		rules.wave_sent.connect(func(i: int, n: int, line: String) -> void:
 			say(tr("Волна %d: %d врагов идут на крепость!") % [i + 1, n] + ("\n" + tr(line) if line != "" else ""), UiStyle.BAD))
 		rules.wave_beaten.connect(_on_wave_beaten)
+		rules.reinforced.connect(func(n: int, _at: Vector2) -> void:
+			say(tr("Пленные освобождены: к вам присоединились бойцы (%d)") % n, UiStyle.GOOD))
+		rules.boss_down.connect(func() -> void: say(tr("Вождь пал! Его люди растеряны"), UiStyle.GOLD_BRIGHT))
 	var side := GameState.human()
 	if side == null or GameState.spectating:
 		return
@@ -333,7 +365,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_select_tab((tab + 1) % TABS.size())
 		get_viewport().set_input_as_handled()
 		return
-	var index: int = key.physical_keycode - KEY_1
+	var index: int = CARD_KEYS.find(key.physical_keycode)
 	var row: Array = cards.get(tab, [])
 	if index >= 0 and index < row.size():
 		var card: HudCard = row[index]
@@ -354,7 +386,8 @@ func _back(leave_after_end: bool) -> void:
 		input.cancel_placing()
 	elif input != null and input.rally_armed:
 		input.arm_rally(false)
-	elif input != null and input.selected != null and not get_tree().paused:
+	elif input != null and (input.selected != null or not input.chosen.is_empty()) and not get_tree().paused:
+		input.choose([])
 		input.select(null)
 	elif GameState.is_playing():
 		_show_pause(not get_tree().paused)
@@ -373,6 +406,7 @@ func say(text: String, tint: Color = UiStyle.TEXT) -> void:
 
 func _refresh() -> void:
 	_refresh_unit()
+	_refresh_squad_bar()
 	_refresh_sky()
 	objective.get_parent().visible = rules != null and not GameState.spectating
 	if rules != null:
@@ -389,6 +423,8 @@ func _refresh() -> void:
 	chips["gold"].text = str(e.gold)
 	chips["army"].text = str(side.squad.alive().size())
 	chips["hands"].text = str(side.workers().size())
+	chips["pop"].text = "%d/%d" % [side.population(), side.pop_cap()]
+	chips["pop"].add_theme_color_override("font_color", UiStyle.BAD if not side.room_for() else UiStyle.TEXT)
 	var count := side.hands()
 	for card in _cards_that("hire"):
 		var kind: String = card.get_meta("kind")
@@ -437,8 +473,30 @@ func _refresh() -> void:
 		elif kind == "forge" and side.has_forge_site():
 			card.badge = tr("построена") if side.forge() != null else tr("строится")
 			card.disabled = true
+		elif kind == "market" and side.has_market_site():
+			card.badge = tr("построен") if side.market() != null else tr("строится")
+			card.disabled = true
+		elif kind == "house":
+			card.badge = tr("%d шт.") % side.house_sites() if side.house_sites() > 0 else ""
+			card.disabled = not e.can_afford(GameState.BUILDINGS[kind]["cost"])
 		else:
 			card.disabled = not e.can_afford(GameState.BUILDINGS[kind]["cost"])
+		card.refresh()
+	for card in _cards_that("trade"):
+		var deal: String = card.get_meta("kind")
+		var offer := side.quote(deal)
+		var got: int = offer["get"].values()[0]
+		var usual := Market.usual(deal)
+		card.store = e
+		card.cost = offer["give"]
+		card.title = tr(GOT_TITLE[Market.DEALS[deal]["get"]]) % got
+		# how the deal stands against the usual rate
+		card.badge = "▲" if got > usual else ("▼" if got < usual else "")
+		card.progress = -1.0
+		card.locked = tr("рынок") if side.market() == null else ""
+		card.disabled = side.market() == null or got < 1 or not e.can_afford(offer["give"])
+		card.tooltip_text = "%s\n%s\n%s" % [tr(DEAL_ABOUT[deal]) % [offer["give"].values()[0], got],
+			tr(DEAL_HINT) % usual, tr("Нужен рынок. Обмен всегда с потерей.")]
 		card.refresh()
 	var smithy := side.forge()
 	var hand := side.smith()
@@ -517,6 +575,8 @@ func _hire(kind: String) -> void:
 		_stock(kind)
 	elif not GameState.hire(GameState.human_team, kind):
 		var why := side.order_problem(kind) if side != null and ProductionBuilding.SOLDIERS.has(kind) else ""
+		if why == "" and side != null and not side.room_for():
+			why = "Нет места: постройте дом"
 		say(_why(kind, why) if why != "" else tr("Недостаточно ресурсов"), UiStyle.BAD)
 	elif ProductionBuilding.SOLDIERS.has(kind) and not side.missing_for(kind).is_empty() and not _smith_coming(side):
 		say(tr("Оружие ждёт кузнеца: нет свободных рабочих"), UiStyle.BAD)
@@ -550,6 +610,13 @@ func _place(kind: String) -> void:
 func _assign(job: String) -> void:
 	if GameState.assign_worker(GameState.human_team, job):
 		say({"wood": tr("Рабочий идёт на лес"), "ore": tr("Рабочий идёт на руду"), "gold": tr("Рабочий идёт на золото")}[job])
+	_refresh()
+
+func _trade(deal: String) -> void:
+	if GameState.human().market() == null:
+		say(tr("Нужен рынок"), UiStyle.BAD)
+	elif not GameState.trade(GameState.human_team, deal):
+		say(tr("Недостаточно ресурсов"), UiStyle.BAD)
 	_refresh()
 
 func _forge(item: String) -> void:
@@ -779,6 +846,7 @@ func _build_top_bar() -> void:
 	row.add_child(gap)
 	_chip(row, "army", tr("Армия"))
 	_chip(row, "worker", tr("Рабочие"))
+	_chip(row, "pop", tr("Население: сколько людей и сколько мест. Места дают замок и дома."))
 	row.add_child(VSeparator.new())
 	sky_icon = Control.new()
 	sky_icon.custom_minimum_size = Vector2(22.0, 22.0)
@@ -810,6 +878,86 @@ func _build_minimap() -> void:
 		minimap.custom_minimum_size = Vector2(232.0, 48.0)
 	panel.add_child(minimap)
 
+# --- the squad bar --------------------------------------------------------------
+
+var tutorial: Tutorial
+## The tabs and cards: hidden for a side with no castle (nothing to hire or build).
+var cards_box: Control
+var squad_bar: PanelContainer
+var group_buttons: Array[Button] = []
+var order_buttons: Array[Button] = []
+var box_button: Button
+const GROUP_KEEP := 0.5        ## holding a group button this long keeps what is picked in it
+
+## Over the bottom bar on the left: pick all, the ones who close, the shooters,
+## groups 1-3 (a press picks, a long press keeps), and orders for what is picked.
+## «Рамка» lets a finger draw a box.
+func _build_squad_bar() -> void:
+	squad_bar = PanelContainer.new()
+	squad_bar.anchor_top = 1.0
+	squad_bar.anchor_bottom = 1.0
+	squad_bar.offset_left = 8.0
+	squad_bar.offset_bottom = -bar_height - 12.0
+	squad_bar.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	squad_bar.visible = not GameState.spectating
+	root.add_child(squad_bar)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 3)
+	squad_bar.add_child(row)
+	for spec in [["all", "Все", "Выбрать всю армию"], ["melee", "Пехота", "Выбрать всех, кто бьётся вблизи"],
+			["ranged", "Стрелки", "Выбрать стрелков и магов"]]:
+		var pick := _small_button(row, tr(spec[1]), tr(spec[2]))
+		pick.pressed.connect(func() -> void:
+			if input != null:
+				input.pick_all(spec[0]))
+	row.add_child(VSeparator.new())
+	for number in [1, 2, 3]:
+		var group := _small_button(row, str(number),
+			tr("Группа %d: нажать — выбрать, дважды — показать. Удержать (или Ctrl+%d) — запомнить выбранных.") % [number, number])
+		group.custom_minimum_size.x = 30.0
+		var held := [0]
+		group.button_down.connect(func() -> void: held[0] = Time.get_ticks_msec())
+		group.button_up.connect(func() -> void:
+			if input == null:
+				return
+			if Time.get_ticks_msec() - held[0] >= GROUP_KEEP * 1000.0:
+				input.keep_group(number)
+			else:
+				input.recall_group(number))
+		group_buttons.append(group)
+	row.add_child(VSeparator.new())
+	for spec in [["Стой", "Выбранные встают, где стоят", false], ["Держать", "Выбранные держат место и никого не преследуют", true]]:
+		var order := _small_button(row, tr(spec[0]), tr(spec[1]))
+		order.pressed.connect(func() -> void:
+			if input != null:
+				input.stop_chosen(spec[2]))
+		order_buttons.append(order)
+	box_button = _small_button(row, tr("Рамка"), tr("Пальцем рисовать рамку выбора вместо движения камеры"))
+	box_button.toggle_mode = true
+	box_button.toggled.connect(func(on: bool) -> void:
+		if input != null:
+			input.box_mode = on)
+
+func _small_button(row: HBoxContainer, text: String, hint: String) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.tooltip_text = hint
+	button.focus_mode = Control.FOCUS_NONE
+	button.custom_minimum_size = Vector2(0.0, 30.0 if compact else 26.0)
+	button.add_theme_font_size_override("font_size", 13 if compact else 12)
+	row.add_child(button)
+	return button
+
+func _refresh_squad_bar() -> void:
+	if squad_bar == null or input == null:
+		return
+	for button in order_buttons:
+		button.disabled = input.chosen.is_empty()
+	for i in group_buttons.size():
+		var kept: Array = input.groups.get(i + 1, [])
+		group_buttons[i].modulate = Color.WHITE if not kept.is_empty() else Color(1, 1, 1, 0.55)
+	box_button.visible = TouchInput.in_use or box_button.button_pressed
+
 func _build_bottom_bar() -> void:
 	var panel := PanelContainer.new()
 	panel.anchor_left = 0.0
@@ -830,6 +978,7 @@ func _build_bottom_bar() -> void:
 	var left := VBoxContainer.new()
 	left.add_theme_constant_override("separation", 4)
 	row.add_child(left)
+	cards_box = left
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 4)
 	left.add_child(tabs)
@@ -852,7 +1001,7 @@ func _build_bottom_bar() -> void:
 		var kinds: Array = TABS[t]["cards"]
 		for i in kinds.size():
 			var kind: String = kinds[i]
-			var key := str(i + 1)
+			var key: String = CARD_KEY_NAMES[i]
 			var card: HudCard
 			match TABS[t]["does"]:
 				"hire" when kind == "repair":
@@ -882,6 +1031,12 @@ func _build_bottom_bar() -> void:
 						"%s\n%s" % [tr(entry["about"]), tr("Кузнецу работы у наковальни: около %d с.") % int(entry["work"])])
 					card.set_meta("tip", card.tooltip_text)
 					_when_pressed(card, _forge.bind(kind))
+				"trade":
+					var usual_offer := Market.quote(kind, Market.BASE_PRICE)
+					card = _card(kind, tr(GOT_TITLE[Market.DEALS[kind]["get"]]) % Market.usual(kind), usual_offer["give"], key,
+						tr("Нужен рынок. Обмен всегда с потерей."))
+					card.icon_kind = Market.DEALS[kind]["get"]
+					_when_pressed(card, _trade.bind(kind))
 				"learn":
 					var entry: Dictionary = PlayerState.RESEARCH[kind]
 					var after := ""
@@ -1122,7 +1277,10 @@ func _on_camp_cleared(team: int, bounty: Dictionary) -> void:
 	if GameState.spectating:
 		return
 	if team == GameState.human_team:
-		say(tr("Лагерь разбойников разгромлен! Добыча: %s") % ", ".join(_goods(bounty)), UiStyle.GOLD_BRIGHT)
+		if bounty.is_empty():
+			say(tr("Лагерь разбойников разгромлен!"), UiStyle.GOLD_BRIGHT)
+		else:
+			say(tr("Лагерь разбойников разгромлен! Добыча: %s") % ", ".join(_goods(bounty)), UiStyle.GOLD_BRIGHT)
 	elif team != Team.Id.NEUTRAL:
 		say(tr("Противник разгромил лагерь разбойников"), UiStyle.BAD)
 
@@ -1192,6 +1350,9 @@ func _build_unit_panel() -> void:
 
 ## Fills the window from whoever is being looked at, or hides it.
 func _refresh_unit() -> void:
+	if input != null and input.chosen.size() > 1:
+		_refresh_squad_panel()
+		return
 	var body: PlayerBody = input.selected if input != null else null
 	if body == null or not is_instance_valid(body):
 		unit_panel.visible = false
@@ -1201,7 +1362,7 @@ func _refresh_unit() -> void:
 	var side := "[color=#%s]%s[/color]" % [Team.color(body.team).lightened(0.25).to_html(false), tr(GameState.team_name(body.team))]
 	if body is Unit:
 		var unit := body as Unit
-		unit_title.text = "%s  %s" % [tr(NAMES.get(unit.loadout, "Боец")), "★".repeat(unit.stars) + "☆".repeat(Unit.STARS_AT.size() - unit.stars)]
+		unit_title.text = "%s  %s" % [tr(unit.epithet) if unit.epithet != "" else tr(NAMES.get(unit.loadout, "Боец")), "★".repeat(unit.stars) + "☆".repeat(Unit.STARS_AT.size() - unit.stars)]
 		lines.append(side + "  ·  " + (("[color=#e06050]%s[/color]" % tr("пал в бою")) if unit.is_dead else _doing(unit)))
 		lines.append(tr("Здоровье: [b]%d[/b] / %d") % [ceili(unit.health), roundi(unit.health_max)])
 		lines.append(tr("Выносливость: %d / %d") % [roundi(unit.stamina), roundi(PlayerBody.STAMINA_MAX)])
@@ -1235,6 +1396,32 @@ func _refresh_unit() -> void:
 		lines.append(side + "  ·  " + (("[color=#e06050]%s[/color]" % tr("погиб")) if body.is_dead else job))
 		lines.append(tr("Здоровье: [b]%d[/b] / %d") % [ceili(body.health), roundi(body.health_max)])
 		lines.append(tr("В руках: %s") % tr(WEAPON_NAMES.get(body.weapon, "?")))
+	unit_text.text = "\n".join(lines)
+
+## Several of ours picked: how many of each kind, and how they stand.
+func _refresh_squad_panel() -> void:
+	unit_panel.visible = true
+	var kinds := {}
+	var health := 0.0
+	var most := 0.0
+	for unit in input.chosen:
+		kinds[unit.loadout] = int(kinds.get(unit.loadout, 0)) + 1
+		health += unit.health
+		most += unit.health_max
+	var group := ""
+	var ids: Array = input.ids_of(input.chosen)
+	ids.sort()
+	for number in input.groups:
+		var kept: Array = (input.groups[number] as Array).duplicate()
+		kept.sort()
+		if kept == ids:
+			group = "  ·  " + tr("группа %d") % number
+	unit_title.text = tr("Отряд: %d") % input.chosen.size() + group
+	var lines := []
+	for loadout in kinds:
+		lines.append("%s ×%d" % [tr(NAMES.get(loadout, "Боец")), kinds[loadout]])
+	lines.append(tr("Здоровье: [b]%d[/b] / %d") % [ceili(health), roundi(most)])
+	lines.append("[color=#%s]%s[/color]" % [UiStyle.DIM.to_html(false), tr("ПКМ — в атаку, стрелки встают позади. «Стой», «Держать» — над панелью.")])
 	unit_text.text = "\n".join(lines)
 
 func _doing(unit: Unit) -> String:

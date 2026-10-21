@@ -2,9 +2,11 @@
 
 Russian is the game's source language: every text is written in Russian in
 `scripts/`, and that Russian text is its own translation key. Every other
-language is one gettext file here, `<code>.po` (`en.po`, `de.po`). The `Lang`
+language is one gettext file here, `<code>.po` (`en.po`, `de.po`, `es.po`). The `Lang`
 autoload (`scripts/lang.gd`) finds and loads every `.po` in this folder at
-start, and the main menu's language button lists them.
+start. There is no language menu: the game speaks the system's language if it
+has a `.po` for it, and English otherwise. To see a language on this PC, start
+the game with `LABIRINT_LANG=<code>`.
 
 ## Adding a language
 

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="MapData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/map_data.gd" id="MapScript"]
+[ext_resource type="Script" path="res://scripts/side_layout.gd" id="SideScript"]
+
+[sub_resource type="Resource" id="PlayerSide"]
+script = ExtResource("SideScript")
+team = 1
+has_base = false
+rally = Vector2(720, 250)
+start_soldiers = PackedStringArray("knight", "knight", "knight", "spearman", "spearman", "spearman", "torchbearer", "scout", "archer", "archer", "archer", "mage")
+
+[sub_resource type="Resource" id="EnemySide"]
+script = ExtResource("SideScript")
+team = 2
+base = Vector2(2210, 300)
+barracks = Vector2(1980, 130)
+has_barracks = false
+stockpile = Vector2(2060, 440)
+towers = Array[Vector2]([Vector2(1560, 190), Vector2(1560, 410)])
+rally = Vector2(1880, 300)
+start_soldiers = PackedStringArray("knight", "knight", "spearman", "spearman", "spearman", "warrior", "warrior", "archer", "archer", "archer")
+start_stock = {}
+
+[resource]
+script = ExtResource("MapScript")
+title = "Учебный штурм"
+floor_size = Vector2(2400, 560)
+tree_positions = Array[Vector2]([Vector2(200, 548), Vector2(244, 512), Vector2(288, 548), Vector2(332, 512), Vector2(376, 548), Vector2(420, 512), Vector2(464, 548), Vector2(508, 512), Vector2(552, 548), Vector2(596, 512), Vector2(640, 548), Vector2(684, 512), Vector2(728, 548), Vector2(772, 512), Vector2(816, 548), Vector2(860, 512), Vector2(904, 548), Vector2(948, 512), Vector2(992, 548), Vector2(1036, 512), Vector2(1080, 548), Vector2(1124, 512), Vector2(1168, 548), Vector2(1212, 512), Vector2(1256, 548), Vector2(1300, 512), Vector2(1344, 548), Vector2(1388, 512), Vector2(1432, 548), Vector2(1476, 512), Vector2(1520, 548), Vector2(1564, 512)])
+weather = false
+fog = true
+player = SubResource("PlayerSide")
+enemy = SubResource("EnemySide")
+spawn_points = Dictionary[String, Vector2]({
+"west": Vector2(40, 300)
+})

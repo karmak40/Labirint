@@ -1,0 +1,1463 @@
+# Labirint: traducción al español.
+# The msgids are the game's Russian source texts, exactly as in scripts/.
+# Keep every %d / %s / %.0f / %% in its msgstr, in the same order.
+msgid ""
+msgstr ""
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# the language's name in itself, for the language menu
+msgid "@language"
+msgstr "Español"
+
+# "no" when nouns keep their capital letter inside a sentence
+msgid "@lowercase"
+msgstr "yes"
+
+msgid "Первая кровь"
+msgstr "Primera sangre"
+
+msgid "Сразить врага"
+msgstr "Abatir a un enemigo"
+
+msgid "Ломать — не строить"
+msgstr "Destruir es más fácil"
+
+msgid "Разрушить вражескую башню"
+msgstr "Destruir una torre enemiga"
+
+msgid "Крепость пала"
+msgstr "Cae la fortaleza"
+
+msgid "Победить в схватке"
+msgstr "Ganar una escaramuza"
+
+msgid "Блицкриг"
+msgstr "Guerra relámpago"
+
+msgid "Победить быстрее чем за 5 минут"
+msgstr "Ganar en menos de 5 minutos"
+
+msgid "Ни царапины"
+msgstr "Ni un rasguño"
+
+msgid "Победить, не дав тронуть свою крепость"
+msgstr "Ganar sin dejar que toquen tu fortaleza"
+
+msgid "Легион"
+msgstr "Legión"
+
+msgid "Собрать армию из 10 воинов"
+msgstr "Reunir un ejército de 10 soldados"
+
+msgid "Лесопилка"
+msgstr "Aserradero"
+
+msgid "Сдать на склад 1000 дерева за всё время"
+msgstr "Entregar 1000 de madera al almacén en total"
+
+msgid "Рудник"
+msgstr "Mina"
+
+msgid "Сдать на склад 500 руды за всё время"
+msgstr "Entregar 500 de mineral al almacén en total"
+
+msgid "Золотая лихорадка"
+msgstr "Fiebre del oro"
+
+msgid "Сдать на склад 100 золота за всё время"
+msgstr "Entregar 100 de oro al almacén en total"
+
+msgid "Ветеран"
+msgstr "Veterano"
+
+msgid "Победить 5 раз"
+msgstr "Ganar 5 veces"
+
+msgid "Ровный"
+msgstr "Equilibrada"
+
+msgid "Всего понемногу: рабочие, знания, башни и смешанная армия."
+msgstr "Un poco de todo: obreros, estudios, torres y un ejército mixto."
+
+msgid "Натиск"
+msgstr "Embestida"
+
+msgid "Рано и часто нападает дешёвыми бойцами: копейщики, воины, секироносцы, лазутчики и поджигатели. Башен не строит."
+msgstr "Ataca pronto y a menudo con combatientes baratos: lanceros, guerreros, hacheros, exploradores e incendiarios. No construye torres."
+
+msgid "Оборона"
+msgstr "Defensa"
+
+msgid "Сидит за башнями, лучниками, арбалетчиками и магами. Выходит поздно и большой армией."
+msgstr "Se atrinchera tras torres, arqueros, ballesteros y magos. Sale tarde y con un gran ejército."
+
+msgid "Знания"
+msgstr "Saber"
+
+msgid "Копит, строит хозяйство и учится. Идёт в бой рыцарями, двуручниками, арбалетчиками и магами, когда всё изучит."
+msgstr "Ahorra, levanta su economía y estudia. Va a la guerra con caballeros, mandobles, ballesteros y magos cuando lo ha aprendido todo."
+
+msgid "Лёгкий"
+msgstr "Fácil"
+
+msgid "Думает медленно, долго собирается, армии меньше, не контратакует, учится немногому."
+msgstr "Piensa despacio, tarda en reunirse, ejércitos menores, no contraataca y estudia poco."
+
+msgid "Обычный"
+msgstr "Normal"
+
+msgid "Играет свою стратегию, но не спешит: реагирует и собирается с задержкой."
+msgstr "Sigue su estrategia sin prisa: reacciona y se reúne con retraso."
+
+msgid "Сложный"
+msgstr "Difícil"
+
+msgid "Быстро решает, больше рабочих и войск, бережёт уцелевших."
+msgstr "Decide rápido, más obreros y tropas, y cuida a los supervivientes."
+
+msgid "Случайная"
+msgstr "Aleatoria"
+
+msgid "Лесной рубеж"
+msgstr "Frontera del bosque"
+
+msgid "Враг встал лагерем на другом конце долины. Нарубите леса, добудьте руды, соберите войско и сожгите их крепость."
+msgstr "El enemigo ha acampado en el otro extremo del valle. Tala madera, extrae mineral, reúne un ejército y quema su fortaleza."
+
+msgid "Разрушить вражескую крепость."
+msgstr "Destruir la fortaleza enemiga."
+
+msgid "Золотое ущелье"
+msgstr "Garganta dorada"
+
+msgid "Всё золото долины — в узком ущелье посередине, и враг перекрыл его выход двумя башнями. У золотых жил встали лагерем разбойники: рабочие туда не пойдут, пока лагерь не разгромлен, а в сундуке разбойников найдётся добыча. Без золота не будет ни рыцарей, ни арбалетов."
+msgstr "Todo el oro del valle está en la estrecha garganta del centro, y el enemigo ha cerrado su salida con dos torres. Unos bandidos han acampado junto a las vetas de oro: los obreros no irán allí hasta que el campamento sea arrasado, y el cofre de los bandidos guarda un botín. Sin oro no habrá caballeros ni ballestas."
+
+msgid "Прорваться через ущелье и разрушить вражескую крепость."
+msgstr "Abrirse paso por la garganta y destruir la fortaleza enemiga."
+
+msgid "Осада"
+msgstr "Asedio"
+
+msgid "Враг заперся в крепости за тремя башнями и шлёт на вас волну за волной. Выстойте — после последней волны их ворота откроются."
+msgstr "El enemigo se ha encerrado en su fortaleza tras tres torres y os lanza oleada tras oleada. Resistid: tras la última oleada sus puertas se abrirán."
+
+msgid "Отбить 5 волн, затем разрушить вражескую крепость."
+msgstr "Rechazar 5 oleadas y luego destruir la fortaleza enemiga."
+
+msgid "Копьё"
+msgstr "Lanza"
+
+msgid "Оружие копейщика."
+msgstr "El arma del lancero."
+
+msgid "Лук"
+msgstr "Arco"
+
+msgid "Оружие лучника."
+msgstr "El arma del arquero."
+
+msgid "Арбалет"
+msgstr "Ballesta"
+
+msgid "Оружие арбалетчика."
+msgstr "El arma del ballestero."
+
+msgid "Секира"
+msgstr "Hacha"
+
+msgid "Оружие секироносца."
+msgstr "El arma del hachero."
+
+msgid "Меч"
+msgstr "Espada"
+
+msgid "Оружие мечника и рыцаря."
+msgstr "El arma de espadachines y caballeros."
+
+msgid "Двуручный меч"
+msgstr "Mandoble"
+
+msgid "Оружие двуручника."
+msgstr "El arma del mandoble."
+
+msgid "Кинжал"
+msgstr "Daga"
+
+msgid "Оружие лазутчика."
+msgstr "El arma del explorador."
+
+msgid "Факел"
+msgstr "Antorcha"
+
+msgid "Оружие поджигателя."
+msgstr "El arma del incendiario."
+
+msgid "Посох"
+msgstr "Bastón"
+
+msgid "Оружие мага."
+msgstr "El arma del mago."
+
+msgid "Шлем"
+msgstr "Yelmo"
+
+msgid "Бережёт голову: −10% урона. Надевает боец без шлема."
+msgstr "Protege la cabeza: −10% de daño. Lo lleva un combatiente sin yelmo."
+
+msgid "Латы"
+msgstr "Coraza"
+
+msgid "−20% урона. Надевает боец без доспеха."
+msgstr "−20% de daño. Lo lleva un combatiente sin armadura."
+
+msgid "Щит"
+msgstr "Escudo"
+
+msgid "−30% урона от ударов и стрел спереди. Только к одноручному оружию: дубине, секире, мечу, кинжалу, факелу."
+msgstr "−30% de daño de golpes y flechas de frente. Solo con armas de una mano: garrote, hacha, espada, daga, antorcha."
+
+msgid "Башня"
+msgstr "Torre"
+
+msgid "Стреляет по врагам вокруг. Хороша у ворот и у рудников."
+msgstr "Dispara a los enemigos de alrededor. Útil junto a las puertas y las minas."
+
+msgid "Библиотека"
+msgstr "Biblioteca"
+
+msgid "Здесь изучают технологии: новых воинов и улучшения. Одна на сторону."
+msgstr "Aquí se estudian tecnologías: nuevos soldados y mejoras. Una por bando."
+
+msgid "Казарма"
+msgstr "Cuartel"
+
+msgid "Здесь нанимают солдат. Без неё армии не будет. Одна на сторону."
+msgstr "Aquí se contratan soldados. Sin él no hay ejército. Uno por bando."
+
+msgid "Кузница"
+msgstr "Forja"
+
+msgid "Куёт оружие для новобранцев, а ещё шлемы, латы и щиты. Две наковальни — два кузнеца. Не больше двух на сторону."
+msgstr "Forja armas para los reclutas, y también yelmos, corazas y escudos. Dos yunques, dos herreros. No más de dos por bando."
+
+msgid "синие"
+msgstr "Azules"
+
+msgid "красные"
+msgstr "Rojos"
+
+msgid "разбойники"
+msgstr "bandidos"
+
+msgid "никто"
+msgstr "nadie"
+
+msgid "Нельзя"
+msgstr "No permitido"
+
+msgid "Библиотека уже есть"
+msgstr "Ya hay una biblioteca"
+
+msgid "Уже две кузницы"
+msgstr "Ya hay dos forjas"
+
+msgid "Казарма уже есть"
+msgstr "Ya hay un cuartel"
+
+msgid "За краем поля"
+msgstr "Fuera del campo"
+
+msgid "Слишком далеко от своих построек"
+msgstr "Demasiado lejos de tus edificios"
+
+msgid "Мешает другая постройка"
+msgstr "Otro edificio estorba"
+
+msgid "Загородит вход"
+msgstr "Bloquearía una entrada"
+
+msgid "Перед входом нет места"
+msgstr "No hay sitio ante la entrada"
+
+msgid "Мешают деревья"
+msgstr "Los árboles estorban"
+
+msgid "Мешает жила"
+msgstr "Una veta estorba"
+
+msgid "Мешают скалы"
+msgstr "Las rocas estorban"
+
+msgid "Мешает склад"
+msgstr "El almacén estorba"
+
+msgid "Мешают люди"
+msgstr "La gente estorba"
+
+msgid "Недостаточно ресурсов"
+msgstr "Recursos insuficientes"
+
+msgid "Русский"
+msgstr "Русский"
+
+msgid "Копья"
+msgstr "Lanzas"
+
+msgid "Кузница учится ковать оружие для копейщиков."
+msgstr "La forja aprende a forjar armas para lanceros."
+
+msgid "Луки"
+msgstr "Arcos"
+
+msgid "Кузница учится ковать оружие для лучников: бьют издалека, но хрупкие."
+msgstr "La forja aprende a forjar armas para arqueros: golpean de lejos, pero son frágiles."
+
+msgid "Арбалеты"
+msgstr "Ballestas"
+
+msgid "Кузница учится ковать оружие для арбалетчиков: бьют сильнее и дальше лука, но медленно перезаряжают."
+msgstr "La forja aprende a forjar armas para ballesteros: golpean más fuerte y más lejos que el arco, pero recargan despacio."
+
+msgid "Рыцарство"
+msgstr "Caballería"
+
+msgid "Учит ковать рыцарский комплект: меч, щит, шлем и латы. Открывает рыцарей."
+msgstr "Enseña a forjar el equipo de caballero: espada, escudo, yelmo y coraza. Desbloquea a los caballeros."
+
+msgid "Кузнечное дело"
+msgstr "Herrería"
+
+msgid "+25% к урону всех воинов, и тех, что уже в строю."
+msgstr "+25% de daño para todos los soldados, también los que ya están en filas."
+
+msgid "Кольчуга"
+msgstr "Cota de malla"
+
+msgid "+25% к здоровью всех воинов, и тех, что уже в строю."
+msgstr "+25% de salud para todos los soldados, también los que ya están en filas."
+
+msgid "Секиры"
+msgstr "Hachas"
+
+msgid "Кузница учится ковать оружие для секироносцев: рубят сильно и ломают стены в полтора раза быстрее."
+msgstr "La forja aprende a forjar armas para hacheros: hachan con fuerza y derriban muros una vez y media más rápido."
+
+msgid "Клинки"
+msgstr "Espadas"
+
+msgid "Кузница учится ковать оружие для мечников: крепкие и ровные бойцы в шлемах."
+msgstr "La forja aprende a forjar armas para espadachines: combatientes recios y constantes, con yelmo."
+
+msgid "Двуручные мечи"
+msgstr "Mandobles"
+
+msgid "Кузница учится ковать оружие для двуручников: самый тяжёлый удар в игре, но медленный и утомительный."
+msgstr "La forja aprende a forjar armas para mandobles: el golpe más pesado del juego, pero lento y agotador."
+
+msgid "Кинжалы"
+msgstr "Dagas"
+
+msgid "Кузница учится ковать оружие для лазутчиков: быстрые и дешёвые, охотятся на рабочих."
+msgstr "La forja aprende a forjar armas para exploradores: rápidos y baratos, cazan obreros."
+
+msgid "Поджог"
+msgstr "Incendio"
+
+msgid "Кузница учится ковать оружие для поджигателей: слабы в бою, но жгут постройки вчетверо быстрее."
+msgstr "La forja aprende a forjar armas para incendiarios: débiles en combate, pero queman edificios cuatro veces más rápido."
+
+msgid "Магия"
+msgstr "Magia"
+
+msgid "Кузница учится ковать оружие для магов: посох бьёт молнией издалека и сильнее арбалета."
+msgstr "La forja aprende a forjar armas para magos: el bastón lanza rayos desde lejos y golpea más que una ballesta."
+
+msgid "Исцеление"
+msgstr "Curación"
+
+msgid "Маги лечат своих: вне боя всех раненых, в бою — только тех, кто при смерти."
+msgstr "Los magos curan a los suyos: fuera de combate a todos los heridos, en combate solo a los moribundos."
+
+msgid "Нужно: %s"
+msgstr "Necesita: %s"
+
+msgid "Нет замка"
+msgstr "Sin castillo"
+
+msgid "Нет казармы"
+msgstr "Sin cuartel"
+
+msgid "Казарма строится"
+msgstr "El cuartel está en obras"
+
+msgid "Слишком много заказов"
+msgstr "Demasiados pedidos"
+
+msgid "Нет кузницы"
+msgstr "Sin forja"
+
+msgid "Волна %d из %d через %d с"
+msgstr "Oleada %d de %d en %d s"
+
+msgid "Отбейте последнюю волну: осталось %d"
+msgstr "Rechaza la última oleada: quedan %d"
+
+msgid "Слежу"
+msgstr "Siguiendo"
+
+msgid "Свободная камера"
+msgstr "Cámara libre"
+
+msgid "Дрейф"
+msgstr "Deriva"
+
+msgid "Дрейф выключен"
+msgstr "Deriva desactivada"
+
+msgid "Перелёт: %s с"
+msgstr "Travelling: %s s"
+
+msgid "Полоски здоровья: скрыты"
+msgstr "Barras de salud: ocultas"
+
+msgid "Полоски здоровья: видны"
+msgstr "Barras de salud: visibles"
+
+msgid "Некого снимать"
+msgstr "Nadie a quien filmar"
+
+msgid "Кадр %d запомнен"
+msgstr "Plano %d guardado"
+
+msgid "Кадр %d пуст: Ctrl+%d — запомнить"
+msgstr "El plano %d está vacío: Ctrl+%d lo guarda"
+
+msgid "Скорость ×%s"
+msgstr "Velocidad ×%s"
+
+msgid "Пуск"
+msgstr "Reproducir"
+
+msgid "Стоп-кадр"
+msgstr "Imagen congelada"
+
+msgid "Тумана нет"
+msgstr "Sin niebla de guerra"
+
+msgid "Туман войны: снят"
+msgstr "Niebla de guerra: quitada"
+
+msgid "Туман войны: есть"
+msgstr "Niebla de guerra: activa"
+
+msgid "Погоды нет"
+msgstr "Sin clima"
+
+msgid "Скоро: сумерки"
+msgstr "Pronto: crepúsculo"
+
+msgid "Скоро: ночь"
+msgstr "Pronto: noche"
+
+msgid "Скоро: рассвет"
+msgstr "Pronto: amanecer"
+
+msgid "Скоро: день"
+msgstr "Pronto: día"
+
+msgid "Дождь: как по небу"
+msgstr "Lluvia: según el cielo"
+
+msgid "Дождь: всегда"
+msgstr "Lluvia: siempre"
+
+msgid "Дождь: никогда"
+msgstr "Lluvia: nunca"
+
+msgid "Режим съёмки · F1 — клавиши · H — без подсказок · F10 — выход"
+msgstr "Modo de rodaje · F1 — teclas · H — sin pistas · F10 — salir"
+
+msgid "WASD / стрелки — камера (Shift — медленно),  C — дрейф"
+msgstr "WASD / flechas — cámara (Shift — lento),  C — deriva"
+
+msgid "колесо, Q / E — приближение"
+msgstr "rueda, Q / E — zoom"
+
+msgid "ЛКМ по бойцу — следить,  F — следить за выбранным / ближайшим"
+msgstr "Clic izq. en un soldado — seguir,  F — seguir al elegido / más cercano"
+
+msgid "Ctrl+1..9 — запомнить кадр,  1..9 — перелёт,  Shift+1..9 — склейка"
+msgstr "Ctrl+1..9 — guardar plano,  1..9 — travelling,  Shift+1..9 — corte"
+
+msgid "[ ] — длительность перелёта"
+msgstr "[ ] — duración del travelling"
+
+msgid "Z / X — медленнее / быстрее,  Пробел — стоп-кадр"
+msgstr "Z / X — más lento / más rápido,  Espacio — imagen congelada"
+
+msgid "B — широкий экран,  V — туман войны,  U — полоски здоровья"
+msgstr "B — pantalla ancha,  V — niebla de guerra,  U — barras de salud"
+
+msgid "N — следующее время суток,  R — дождь"
+msgstr "N — siguiente hora del día,  R — lluvia"
+
+msgid "ПКМ — приказ армии,  H — скрыть всё,  F10 / Esc — выход"
+msgstr "Clic der. — orden al ejército,  H — ocultar todo,  F10 / Esc — salir"
+
+msgid "скорость ×%s · перелёт %s с · кадров: %d"
+msgstr "velocidad ×%s · travelling %s s · planos: %d"
+
+msgid "Рабочие"
+msgstr "Obreros"
+
+msgid "Пехота"
+msgstr "Infantería"
+
+msgid "Особые"
+msgstr "Especiales"
+
+msgid "Постройки"
+msgstr "Edificios"
+
+msgid "Оружие"
+msgstr "Armas"
+
+msgid "Науки"
+msgstr "Estudios"
+
+msgid "Рабочий"
+msgstr "Obrero"
+
+msgid "Лес"
+msgstr "Madera"
+
+msgid "Руда"
+msgstr "Mineral"
+
+msgid "Золото"
+msgstr "Oro"
+
+msgid "Ремонт"
+msgstr "Reparar"
+
+msgid "Лесоруб"
+msgstr "Leñador"
+
+msgid "Рудокоп"
+msgstr "Minero"
+
+msgid "Старатель"
+msgstr "Buscaoro"
+
+msgid "Воин"
+msgstr "Guerrero"
+
+msgid "Копейщик"
+msgstr "Lancero"
+
+msgid "Лучник"
+msgstr "Arquero"
+
+msgid "Арбалетчик"
+msgstr "Ballestero"
+
+msgid "Рыцарь"
+msgstr "Caballero"
+
+msgid "Секироносец"
+msgstr "Hachero"
+
+msgid "Мечник"
+msgstr "Espadachín"
+
+msgid "Двуручник"
+msgstr "Mandoble"
+
+msgid "Лазутчик"
+msgstr "Explorador"
+
+msgid "Поджигатель"
+msgstr "Incendiario"
+
+msgid "Маг"
+msgstr "Mago"
+
+msgid "Нанимается в замке. Идёт туда, где рук меньше: на лес или на руду. Стоит 10 дерева или 10 руды — чего на складе больше."
+msgstr "Se contrata en el castillo. Va donde hay menos manos: a la madera o al mineral. Cuesta 10 de madera o 10 de mineral, lo que más haya en el almacén."
+
+msgid "Переводит одного рабочего на лес: рубит деревья и носит брёвна на склад."
+msgstr "Pasa a un obrero a la madera: tala árboles y lleva los troncos al almacén."
+
+msgid "Переводит одного рабочего на руду: добывает её в жилах и носит на склад."
+msgstr "Pasa a un obrero al mineral: lo extrae de las vetas y lo lleva al almacén."
+
+msgid "Переводит одного рабочего на золото: оно нужно для знаний."
+msgstr "Pasa a un obrero al oro: hace falta para los estudios."
+
+msgid "Ставит рабочего на ремонт: он обходит повреждённые постройки с молотом, начиная с самой разбитой. 1 дерево за удар (+12 прочности). Не чинит, пока рядом враг. Когда чинить нечего, собирает трофеи по всему полю и несёт в кузницу. Не больше четырёх."
+msgstr "Pone a un obrero a reparar: recorre los edificios dañados con un martillo, empezando por el más maltrecho. 1 de madera por golpe (+12 de resistencia). No repara con un enemigo cerca. Si no hay nada que reparar, recoge trofeos por todo el campo y los lleva a la forja. No más de cuatro."
+
+msgid "Рубит деревья и носит брёвна на склад."
+msgstr "Tala árboles y lleva los troncos al almacén."
+
+msgid "Добывает руду в жилах и носит на склад."
+msgstr "Extrae mineral de las vetas y lo lleva al almacén."
+
+msgid "Добывает золото: оно нужно для знаний."
+msgstr "Extrae oro: hace falta para los estudios."
+
+msgid "Дешёвый боец с дубиной. Доступен сразу."
+msgstr "Un combatiente barato con garrote. Disponible desde el principio."
+
+msgid "Копьё бьёт сильнее дубины, шлем бережёт голову."
+msgstr "La lanza golpea más fuerte que el garrote, y el yelmo protege la cabeza."
+
+msgid "Стреляет издалека и отходит от тех, кто подбирается близко. Хрупкий."
+msgstr "Dispara de lejos y retrocede ante quien se acerca. Frágil."
+
+msgid "Бьёт дальше и сильнее лучника, но между выстрелами взводит арбалет."
+msgstr "Golpea más lejos y más fuerte que un arquero, pero entre disparo y disparo tiene que tensar la ballesta."
+
+msgid "Латы, меч и щит: крепче и сильнее всех."
+msgstr "Coraza, espada y escudo: el más resistente y fuerte de todos."
+
+msgid "Секира рубит сильнее меча и ломает стены в полтора раза быстрее. Без доспеха."
+msgstr "El hacha corta más que la espada y derriba muros una vez y media más rápido. Sin armadura."
+
+msgid "Меч и шлем: крепкий, ровный боец, быстрее бьёт, чем секироносец."
+msgstr "Espada y yelmo: un combatiente recio y constante que golpea más rápido que un hachero."
+
+msgid "Двуручный меч и латы: самый тяжёлый удар, но медленный и быстро выдыхается."
+msgstr "Mandoble y coraza: el golpe más pesado, pero lento, y se queda pronto sin aliento."
+
+msgid "Быстрый и дешёвый, с кинжалом. Видит почти вдвое дальше других — глаза армии в тумане войны. Первым делом режет вражеских рабочих."
+msgstr "Rápido y barato, con daga. Ve casi el doble de lejos que los demás: los ojos del ejército en la niebla de guerra. Lo primero que hace es ir a por los obreros enemigos."
+
+msgid "Слаб в бою, но факел жжёт постройки вчетверо быстрее."
+msgstr "Débil en combate, pero su antorcha quema edificios cuatro veces más rápido."
+
+msgid "Посох бьёт молнией издалека, сильнее арбалета. Очень хрупкий. С «Исцелением» лечит своих."
+msgstr "El bastón lanza rayos desde lejos, más fuertes que una ballesta. Muy frágil. Con «Curación» sana a los suyos."
+
+msgid "Shift+клик — выковать оружие в запас."
+msgstr "Shift+clic — forjar las armas para el almacén."
+
+msgid "Shift+клик — вернуть одного к прежней работе."
+msgstr "Shift+clic — devolver a uno a su antiguo trabajo."
+
+msgid "Кузнецы приходят сами: когда в кузнице есть заказ, к свободной наковальне идёт рабочий — с того промысла, где рук больше всего, ближайший к кузнице. Закончив работу, он через несколько секунд возвращается к прежнему делу. У кузницы две наковальни. Последнего добытчика к наковальне не берут."
+msgstr "Los herreros vienen solos: cuando la forja tiene un pedido, un obrero va a un yunque libre, del oficio con más manos y el más cercano a la forja. Al acabar, unos segundos después vuelve a su antiguo trabajo. Una forja tiene dos yunques. Al último trabajador de un recurso nunca se lo llevan al yunque."
+
+msgid "Склад кузницы: выкованное оружие и снаряжение. Новобранцы забирают своё оружие здесь. Сюда же рабочие приносят трофеи — оружие и доспехи павших, своих и чужих."
+msgstr "El almacén de la forja: armas y equipo ya forjados. Los reclutas recogen aquí sus armas. Los obreros también traen aquí los trofeos: armas y armaduras de los caídos, propios y ajenos."
+
+msgid "найм"
+msgstr "contratación"
+
+msgid "несёт"
+msgstr "lleva"
+
+msgid "без оружия"
+msgstr "sin arma"
+
+msgid "секира"
+msgstr "hacha"
+
+msgid "копьё"
+msgstr "lanza"
+
+msgid "лук"
+msgstr "arco"
+
+msgid "меч"
+msgstr "espada"
+
+msgid "меч и щит"
+msgstr "espada y escudo"
+
+msgid "двуручный меч"
+msgstr "mandoble"
+
+msgid "кирка"
+msgstr "pico"
+
+msgid "кинжал"
+msgstr "daga"
+
+msgid "посох"
+msgstr "bastón"
+
+msgid "факел"
+msgstr "antorcha"
+
+msgid "арбалет"
+msgstr "ballesta"
+
+msgid "дубина"
+msgstr "garrote"
+
+msgid "молот"
+msgstr "martillo"
+
+msgid "рубит лес"
+msgstr "tala árboles"
+
+msgid "добывает руду"
+msgstr "extrae mineral"
+
+msgid "добывает золото"
+msgstr "extrae oro"
+
+msgid "строит"
+msgstr "construye"
+
+msgid "кузнец у наковальни"
+msgstr "herrero en el yunque"
+
+msgid "чинит постройки"
+msgstr "repara edificios"
+
+msgid "новобранец"
+msgstr "recluta"
+
+msgid "День"
+msgstr "Día"
+
+msgid "Сумерки"
+msgstr "Crepúsculo"
+
+msgid "Ночь"
+msgstr "Noche"
+
+msgid "Рассвет"
+msgstr "Amanecer"
+
+msgid "Ночью все видят хуже: бойцы замечают врага на 40% ближе, башни стреляют на 20% ближе.\nВ дождь луки бьют на 30% слабее, арбалеты на 15%, факелы жгут вдвое хуже, и обзор ещё немного меньше."
+msgstr "De noche todos ven peor: los soldados avistan al enemigo un 40% más cerca y las torres disparan un 20% más cerca.\nBajo la lluvia los arcos golpean un 30% menos, las ballestas un 15%, las antorchas queman la mitad y la vista es aún algo más corta."
+
+msgid "Найм"
+msgstr "Contratación"
+
+msgid "нет казармы"
+msgstr "sin cuartel"
+
+msgid "никого"
+msgstr "nadie"
+
+msgid "нужна библиотека"
+msgstr "hace falta una biblioteca"
+
+msgid "библиотека строится"
+msgstr "biblioteca en obras"
+
+msgid "ничего не изучается"
+msgstr "no se estudia nada"
+
+msgid "Стройка"
+msgstr "Obras"
+
+msgid "нет"
+msgstr "ninguno"
+
+msgid "Дождь: луки и арбалеты бьют слабее, факелы хуже жгут"
+msgstr "Lluvia: arcos y ballestas golpean menos, las antorchas queman peor"
+
+msgid "Дождь кончился"
+msgstr "Ha dejado de llover"
+
+msgid "Ворота вражеской крепости открыты — на штурм!"
+msgstr "Las puertas de la fortaleza enemiga están abiertas: ¡al asalto!"
+
+msgid "Волна %d: %d врагов идут на крепость!"
+msgstr "Oleada %d: ¡%d enemigos marchan sobre la fortaleza!"
+
+msgid "Изучено: %s"
+msgstr "Estudiado: %s"
+
+msgid "Библиотека пала — «%s» потеряно"
+msgstr "La biblioteca ha caído: «%s» se ha perdido"
+
+msgid "Заложено: %s — нет свободных рабочих, стройка ждёт"
+msgstr "Trazado: %s — no hay obreros libres, la obra espera"
+
+msgid "Заложено: %s — рабочий идёт строить"
+msgstr "Trazado: %s — un obrero va a construirlo"
+
+msgid "Построено: %s"
+msgstr "Construido: %s"
+
+msgid "Цель: %s"
+msgstr "Objetivo: %s"
+
+msgid "%d чел."
+msgstr "%d hombres"
+
+msgid "замок"
+msgstr "castillo"
+
+msgid "построена"
+msgstr "construida"
+
+msgid "строится"
+msgstr "en obras"
+
+msgid "кузница"
+msgstr "forja"
+
+msgid "В запасе: %d. Без этого в строю: %d."
+msgstr "En el almacén: %d. En filas sin ello: %d."
+
+msgid "Нет кузнеца: заказ ждёт, пока в кузницу не придёт рабочий."
+msgstr "Sin herrero: el pedido espera a que llegue un obrero a la forja."
+
+msgid "изучено"
+msgstr "estudiado"
+
+msgid "библиотека"
+msgstr "biblioteca"
+
+msgid "дерево %d · руда %d · золото %d · армия %d · рабочие %d"
+msgstr "madera %d · mineral %d · oro %d · ejército %d · obreros %d"
+
+msgid "Оружие ждёт кузнеца: нет свободных рабочих"
+msgstr "Las armas esperan a un herrero: no hay obreros libres"
+
+msgid "Нечего ковать"
+msgstr "Nada que forjar"
+
+msgid "Нельзя выковать: нет рецепта, ресурсов или места в очереди"
+msgstr "No se puede forjar: falta la receta, los recursos o sitio en la cola"
+
+msgid "Куётся в запас: %s"
+msgstr "Forjando para el almacén: %s"
+
+msgid "Рабочий идёт на лес"
+msgstr "Un obrero va a la madera"
+
+msgid "Рабочий идёт на руду"
+msgstr "Un obrero va al mineral"
+
+msgid "Рабочий идёт на золото"
+msgstr "Un obrero va al oro"
+
+msgid "Заказ ждёт кузнеца: нет свободных рабочих"
+msgstr "El pedido espera a un herrero: no hay obreros libres"
+
+msgid "Рабочий идёт чинить постройки"
+msgstr "Un obrero va a reparar edificios"
+
+msgid "Рабочий на ремонте: пока чинить нечего"
+msgstr "Un obrero en reparaciones: aún no hay nada que reparar"
+
+msgid "Ремонтников уже %d"
+msgstr "Ya hay %d reparadores"
+
+msgid "Нет рабочих, чтобы поставить на ремонт"
+msgstr "No hay obreros para ponerlos a reparar"
+
+msgid "Ремонтник вернулся к прежней работе"
+msgstr "El reparador volvió a su antiguo trabajo"
+
+msgid "Никто не чинит"
+msgstr "Nadie repara"
+
+msgid "нет рабочих"
+msgstr "sin obreros"
+
+msgid "нет заказов"
+msgstr "sin pedidos"
+
+msgid "куёт"
+msgstr "forjando"
+
+msgid "идёт"
+msgstr "en camino"
+
+msgid "(куётся %d)"
+msgstr "(%d en forja)"
+
+msgid "%d шт."
+msgstr "%d uds."
+
+msgid "Склад"
+msgstr "Almacén"
+
+msgid "Пусто."
+msgstr "Vacío."
+
+msgid "казарма"
+msgstr "cuartel"
+
+msgid "обучается"
+msgstr "entrenando"
+
+msgid "ждёт: %s"
+msgstr "espera: %s"
+
+msgid "за оружием"
+msgstr "por sus armas"
+
+msgid "Изучается: %s"
+msgstr "Estudiando: %s"
+
+msgid "Пауза"
+msgstr "Pausa"
+
+msgid "Победили %s"
+msgstr "Victoria de %s"
+
+msgid "Крепость противника пала."
+msgstr "La fortaleza del adversario ha caído."
+
+msgid "Победа"
+msgstr "Victoria"
+
+msgid "Вражеская крепость пала."
+msgstr "La fortaleza enemiga ha caído."
+
+msgid "«%s» пройдена за %d:%02d."
+msgstr "«%s» superada en %d:%02d."
+
+msgid "Поражение"
+msgstr "Derrota"
+
+msgid "Ваша крепость пала."
+msgstr "Tu fortaleza ha caído."
+
+msgid "Противник: %s, %s"
+msgstr "Adversario: %s, %s"
+
+msgid "Достижение: %s"
+msgstr "Logro: %s"
+
+msgid "Дерево"
+msgstr "Madera"
+
+msgid "Армия"
+msgstr "Ejército"
+
+msgid "Tab — следующая вкладка"
+msgstr "Tab — siguiente pestaña"
+
+msgid "Кузнец"
+msgstr "Herrero"
+
+msgid "Кузнецы приходят сами, когда в кузнице есть заказ"
+msgstr "Los herreros vienen solos cuando la forja tiene un pedido"
+
+msgid "Кузнецу работы у наковальни: около %d с."
+msgstr "Trabajo en el yunque: unos %d s."
+
+msgid "Сначала: %s."
+msgstr "Antes: %s."
+
+msgid "Изучается %d с в библиотеке."
+msgstr "Se estudia en %d s en la biblioteca."
+
+msgid "В атаку"
+msgstr "Atacar"
+
+msgid "Вся армия — на вражескую крепость"
+msgstr "Todo el ejército — contra la fortaleza enemiga"
+
+msgid "Сбор"
+msgstr "Reunión"
+
+msgid "Вся армия — к точке сбора"
+msgstr "Todo el ejército — al punto de reunión"
+
+msgid "Флаг"
+msgstr "Bandera"
+
+msgid "Перенести точку сбора: нажмите, потом укажите место на поле (или Shift+ПКМ)"
+msgstr "Mover el punto de reunión: pulsa y luego señala un lugar del campo (o Shift+clic der.)"
+
+msgid "Дубину выдают в замке. Нужна только казарма."
+msgstr "El garrote se entrega en el castillo. Solo hace falta un cuartel."
+
+msgid "Новобранец забирает в кузнице: %s, и обучается в казарме."
+msgstr "El recluta recoge en la forja: %s, y entrena en el cuartel."
+
+msgid "Цена ниже, если оружие уже есть на складе."
+msgstr "Es más barato si las armas ya están en el almacén."
+
+msgid "дерево %d"
+msgstr "madera %d"
+
+msgid "руда %d"
+msgstr "mineral %d"
+
+msgid "золото %d"
+msgstr "oro %d"
+
+msgid "Цена: %s"
+msgstr "Precio: %s"
+
+msgid "Пауза (Esc)"
+msgstr "Pausa (Esc)"
+
+msgid "Закрыть"
+msgstr "Cerrar"
+
+msgid "Вернуть одного"
+msgstr "Devolver a uno"
+
+msgid "Выковать оружие в запас"
+msgstr "Forjar armas para el almacén"
+
+msgid "Отмена"
+msgstr "Cancelar"
+
+msgid "%s: коснитесь поля — контур встанет там, коснитесь контура (или перетащите его) — заложить"
+msgstr "%s: toca el campo para poner ahí el contorno; toca el contorno (o arrástralo) para trazar la obra"
+
+msgid "%s: ЛКМ — поставить, Shift — ещё одну, ПКМ или Esc — отмена"
+msgstr "%s: clic izq. — colocar, Shift — otro más, clic der. o Esc — cancelar"
+
+msgid "Точка сбора: коснитесь поля, где собираться новобранцам"
+msgstr "Punto de reunión: toca el campo donde deben reunirse los reclutas"
+
+msgid "Точка сбора: щёлкните по полю, где собираться новобранцам"
+msgstr "Punto de reunión: haz clic en el campo donde deben reunirse los reclutas"
+
+msgid "+%d дерева"
+msgstr "+%d de madera"
+
+msgid "+%d руды"
+msgstr "+%d de mineral"
+
+msgid "+%d золота"
+msgstr "+%d de oro"
+
+msgid "Лагерь разбойников разгромлен! Добыча: %s"
+msgstr "¡Campamento de bandidos arrasado! Botín: %s"
+
+msgid "Противник разгромил лагерь разбойников"
+msgstr "El enemigo ha arrasado un campamento de bandidos"
+
+msgid "Смеркается: скоро ночь, бойцы будут видеть хуже"
+msgstr "Anochece: pronto será de noche y los soldados verán peor"
+
+msgid "%s, дождь"
+msgstr "%s, lluvia"
+
+msgid "Закрыть (Esc)"
+msgstr "Cerrar (Esc)"
+
+msgid "Боец"
+msgstr "Soldado"
+
+msgid "пал в бою"
+msgstr "cayó en combate"
+
+msgid "Здоровье: [b]%d[/b] / %d"
+msgstr "Salud: [b]%d[/b] / %d"
+
+msgid "Выносливость: %d / %d"
+msgstr "Aguante: %d / %d"
+
+msgid "Оружие: %s, навык %d / %d"
+msgstr "Arma: %s, destreza %d / %d"
+
+msgid "Удар: [b]%.0f[/b] урона, %.0f выносливости"
+msgstr "Golpe: [b]%.0f[/b] de daño, %.0f de aguante"
+
+msgid "Стреляет на %d"
+msgstr "Alcance: %d"
+
+msgid "дождь: урон −%d%%"
+msgstr "lluvia: daño −%d%%"
+
+msgid "Обзор: %d"
+msgstr "Visión: %d"
+
+msgid "Видит на %d из %d (%s)"
+msgstr "Ve a %d de %d (%s)"
+
+msgid "ночь"
+msgstr "noche"
+
+msgid "дождь"
+msgstr "lluvia"
+
+msgid "сумерки"
+msgstr "crepúsculo"
+
+msgid "Защита: %s"
+msgstr "Protección: %s"
+
+msgid "Убито: [b]%d[/b]"
+msgstr "Bajas: [b]%d[/b]"
+
+msgid "построек: %d"
+msgstr "edificios: %d"
+
+msgid "до звезды: %d"
+msgstr "para la estrella: %d"
+
+msgid "ветеран"
+msgstr "veterano"
+
+msgid "За звёзды: +%d%% к удару, +%d%% к здоровью, навык +%d"
+msgstr "Por las estrellas: +%d%% de daño, +%d%% de salud, destreza +%d"
+
+msgid "Новобранец"
+msgstr "Recluta"
+
+msgid "идёт стать: %s"
+msgstr "va a ser: %s"
+
+msgid "строит: %s (%d%%)"
+msgstr "construye: %s (%d%%)"
+
+msgid "несёт трофей: %s"
+msgstr "lleva un trofeo: %s"
+
+msgid "погиб"
+msgstr "muerto"
+
+msgid "В руках: %s"
+msgstr "En las manos: %s"
+
+msgid "в бою"
+msgstr "en combate"
+
+msgid "идёт в атаку"
+msgstr "al ataque"
+
+msgid "держит позицию"
+msgstr "mantiene la posición"
+
+msgid "шлем"
+msgstr "yelmo"
+
+msgid "латы"
+msgstr "coraza"
+
+msgid "щит"
+msgstr "escudo"
+
+msgid "%s, −%d%% урона"
+msgstr "%s, −%d%% de daño"
+
+msgid "(спереди −%d%%)"
+msgstr "(de frente −%d%%)"
+
+msgid "Продолжить"
+msgstr "Continuar"
+
+msgid "Следующая комната"
+msgstr "Siguiente sala"
+
+msgid "Заново"
+msgstr "Reintentar"
+
+msgid "В меню"
+msgstr "Al menú"
+
+msgid "база на базу"
+msgstr "base contra base"
+
+msgid "Кампания"
+msgstr "Campaña"
+
+msgid "Схватка"
+msgstr "Escaramuza"
+
+msgid "ИИ против ИИ"
+msgstr "IA contra IA"
+
+msgid "Достижения"
+msgstr "Logros"
+
+msgid "Тестовый стенд"
+msgstr "Banco de pruebas"
+
+msgid "Выход"
+msgstr "Salir"
+
+msgid "Стратегия выбирается в начале боя и не раскрывается до конца."
+msgstr "La estrategia se elige al comienzo del combate y no se revela hasta el final."
+
+msgid "Противник"
+msgstr "Adversario"
+
+msgid "Начать"
+msgstr "Empezar"
+
+msgid "Назад"
+msgstr "Atrás"
+
+msgid "Сложность"
+msgstr "Dificultad"
+
+msgid "Комната %d"
+msgstr "Sala %d"
+
+msgid "закрыта"
+msgstr "cerrada"
+
+msgid "★ победа   ★ быстрее %d мин   ★ крепость цела хотя бы на %d%%"
+msgstr "★ victoria   ★ en menos de %d min   ★ fortaleza intacta al menos al %d%%"
+
+msgid "Противник играет: %s"
+msgstr "El adversario juega: %s"
+
+msgid "В бой"
+msgstr "¡A la batalla!"
+
+msgid "Карта: нажмите, чтобы перейти"
+msgstr "Mapa: haz clic para ir allí"
+
+msgid "В кольце"
+msgstr "Cercados"
+
+msgid "Наш замок стоит посреди долины, и враги идут на него с обеих сторон, волна за волной. Своей крепости у них здесь нет — только орда из-за леса. Стройте, куйте, нанимайте и держитесь, пока не отбита последняя волна. За каждую отбитую крупную волну — трофейные припасы."
+msgstr "Nuestro castillo se alza en mitad del valle y los enemigos lo atacan por ambos lados, oleada tras oleada. Aquí no tienen fortaleza, solo una horda venida de más allá del bosque. Construye, forja, recluta y resiste hasta rechazar la última oleada. Cada oleada grande rechazada deja provisiones de botín."
+
+msgid "Отбить все волны и сохранить замок."
+msgstr "Rechazar todas las oleadas y conservar el castillo."
+
+msgid "Лазутчики идут резать рабочих!"
+msgstr "¡Los exploradores vienen a por los obreros!"
+
+msgid "Поджигатели! Берегите постройки."
+msgstr "¡Incendiarios! Proteged los edificios."
+
+msgid "Последняя волна: рыцари орды!"
+msgstr "La última oleada: ¡los caballeros de la horda!"
+
+msgid "Вы выстояли: все %d волн отбиты."
+msgstr "Habéis resistido: las %d oleadas han sido rechazadas."
+
+msgid "Волна %d отбита"
+msgstr "Oleada %d rechazada"
+
+msgid "Волна %d отбита! Трофеи: %s"
+msgstr "¡Oleada %d rechazada! Botín: %s"
+
+msgid "★ победа   ★ крепость цела хотя бы на %d%%   ★ хотя бы на %d%%"
+msgstr "★ victoria   ★ fortaleza intacta al menos al %d%%   ★ al menos al %d%%"
+
+msgid "Противник: орда без крепости, сложность меняет размер волн"
+msgstr "Adversario: una horda sin fortaleza; la dificultad cambia el tamaño de las oleadas"
+
+msgid "Дом"
+msgstr "Casa"
+
+msgid "Крыша ещё для восьми человек: без домов замок вмещает пятнадцать, и больше никого не нанять."
+msgstr "Techo para ocho personas más: sin casas el castillo aloja a quince y no se puede contratar a nadie más."
+
+msgid "Рынок"
+msgstr "Mercado"
+
+msgid "Обмен ресурсов: всегда с потерей, зато выручит, когда одно кончилось. Один на сторону."
+msgstr "Intercambio de recursos: siempre con pérdida, pero salva cuando uno se acaba. Uno por bando."
+
+msgid "Рынок уже есть"
+msgstr "Ya hay un mercado"
+
+msgid "Нет места: постройте дом"
+msgstr "No hay sitio: construye una casa"
+
+msgid "Нужен рынок. Обмен всегда с потерей."
+msgstr "Hace falta un mercado. Un intercambio siempre pierde algo."
+
+msgid "Нужен рынок"
+msgstr "Hace falta un mercado"
+
+msgid "рынок"
+msgstr "mercado"
+
+msgid "построен"
+msgstr "construido"
+
+msgid "Население: сколько людей и сколько мест. Места дают замок и дома."
+msgstr "Población: cuánta gente y cuánto sitio hay. El castillo y las casas dan sitio."
+
+msgid "Отдать %d дерева и получить %d руды."
+msgstr "Entregar %d de madera y recibir %d de mineral."
+
+msgid "Отдать %d руды и получить %d дерева."
+msgstr "Entregar %d de mineral y recibir %d de madera."
+
+msgid "Отдать %d дерева и получить %d золота."
+msgstr "Entregar %d de madera y recibir %d de oro."
+
+msgid "Отдать %d руды и получить %d золота."
+msgstr "Entregar %d de mineral y recibir %d de oro."
+
+msgid "Отдать %d золота и получить %d дерева."
+msgstr "Entregar %d de oro y recibir %d de madera."
+
+msgid "Отдать %d золота и получить %d руды."
+msgstr "Entregar %d de oro y recibir %d de mineral."
+
+msgid "Курс плавает: что продаёте, дешевеет, что покупаете, дорожает, а со временем всё возвращается. Обычно: %d."
+msgstr "El cambio fluctúa: lo que vendes se abarata, lo que compras se encarece, y con el tiempo todo vuelve. Normalmente: %d."
+
+msgid "Группа %d очищена"
+msgstr "Grupo %d vaciado"
+
+msgid "Группа %d: %d бойцов"
+msgstr "Grupo %d: %d soldados"
+
+msgid "Все"
+msgstr "Todos"
+
+msgid "Выбрать всю армию"
+msgstr "Elegir todo el ejército"
+
+msgid "Выбрать всех, кто бьётся вблизи"
+msgstr "Elegir a todos los que luchan cuerpo a cuerpo"
+
+msgid "Стрелки"
+msgstr "Tiradores"
+
+msgid "Выбрать стрелков и магов"
+msgstr "Elegir a los tiradores y magos"
+
+msgid "Группа %d: нажать — выбрать, дважды — показать. Удержать (или Ctrl+%d) — запомнить выбранных."
+msgstr "Grupo %d: pulsa para elegirlo, dos veces para verlo. Mantén pulsado (o Ctrl+%d) para guardar en él a los elegidos."
+
+msgid "Стой"
+msgstr "Alto"
+
+msgid "Выбранные встают, где стоят"
+msgstr "Los elegidos se quedan donde están"
+
+msgid "Держать"
+msgstr "Aguantar"
+
+msgid "Выбранные держат место и никого не преследуют"
+msgstr "Los elegidos mantienen su puesto y no persiguen a nadie"
+
+msgid "Рамка"
+msgstr "Marco"
+
+msgid "Пальцем рисовать рамку выбора вместо движения камеры"
+msgstr "Dibujar con el dedo un marco de selección en lugar de mover la cámara"
+
+msgid "группа %d"
+msgstr "grupo %d"
+
+msgid "Отряд: %d"
+msgstr "Escuadra: %d"
+
+msgid "ПКМ — в атаку, стрелки встают позади. «Стой», «Держать» — над панелью."
+msgstr "Clic der. para atacar; los tiradores se colocan detrás. «Alto» y «Aguantar» están sobre el panel."
+
+msgid "Осмотритесь. Камеру двигают клавиши WASD или стрелки, колесо мыши приближает. На телефоне тяните поле пальцем, а двумя пальцами меняйте масштаб."
+msgstr "Echa un vistazo. Las teclas WASD o las flechas mueven la cámara y la rueda del ratón acerca la imagen. En el móvil, arrastra el campo con un dedo y cambia el zoom con dos."
+
+msgid "Щёлкните по своему бойцу: внизу справа откроется его окно — здоровье, оружие, защита. На телефоне коснитесь бойца."
+msgstr "Haz clic en uno de tus soldados: abajo a la derecha se abre su ventana con salud, arma y protección. En el móvil, toca al soldado."
+
+msgid "Выберите нескольких: зажмите левую кнопку и обведите бойцов рамкой. На телефоне включите «Рамку» над панелью. Кнопки «Все», «Пехота» и «Стрелки» выбирают сразу многих."
+msgstr "Elige a varios: mantén pulsado el botón izquierdo y rodea a los soldados con un marco. En el móvil, activa «Marco» sobre el panel. Los botones «Todos», «Infantería» y «Tiradores» eligen a muchos de golpe."
+
+msgid "Запомните выбранных как группу: Ctrl+1. Клавиша 1 снова выберет их, двойное нажатие покажет. На телефоне удержите кнопку «1»."
+msgstr "Guarda a los elegidos como grupo: Ctrl+1. La tecla 1 vuelve a elegirlos y, pulsada dos veces, los muestra. En el móvil, mantén pulsado el botón «1»."
+
+msgid "Ведите армию вперёд: правый клик по полю (на телефоне долгое касание). Отряд встанет строем: пехота впереди, лучники и маг позади."
+msgstr "Lleva al ejército adelante: clic derecho en el campo (en el móvil, una pulsación larga). La escuadra se pone en formación: la infantería delante, los arqueros y el mago detrás."
+
+msgid "Туман скрывает врага. Лазутчик видит дальше всех: выберите его двойным кликом и пошлите вперёд, пока не покажутся башни."
+msgstr "La niebla oculta al enemigo. El explorador ve más lejos que nadie: elígelo con doble clic y mándalo adelante hasta que aparezcan las torres."
+
+msgid "Башня бьёт на 150 шагов, а лучник на 220. Выберите стрелков и прикажите им бить башню издалека. Поджигатель жжёт постройки вчетверо быстрее, но в бою слаб."
+msgstr "La torre alcanza 150 pasos y el arquero 220. Elige a los tiradores y ordénales batir la torre desde lejos. El incendiario quema edificios cuatro veces más rápido, pero es débil en combate."
+
+msgid "Маг сам лечит раненых рядом с собой. Держите его позади строя, и потрёпанные бойцы снова встанут в строй."
+msgstr "El mago cura solo a los heridos que tiene cerca. Mantenlo detrás de la línea y los soldados maltrechos volverán a las filas."
+
+msgid "На штурм! «В атаку» ведёт всю армию на замок. Разрушьте его — и победа за вами."
+msgstr "¡Al asalto! «Atacar» lleva a todo el ejército contra el castillo. Derríbalo y la victoria es tuya."
+
+msgid "Дальше"
+msgstr "Siguiente"
+
+msgid "Пропустить этот шаг"
+msgstr "Saltar este paso"
+
+msgid "Скрыть"
+msgstr "Ocultar"
+
+msgid "Убрать обучение до конца боя"
+msgstr "Ocultar las lecciones hasta el final del combate"
+
+msgid "Обучение · шаг %d из %d"
+msgstr "Entrenamiento · paso %d de %d"
+
+msgid "Готово!"
+msgstr "¡Hecho!"
+
+msgid "Обучение"
+msgstr "Entrenamiento"
+
+msgid "Сначала пройдите: %s"
+msgstr "Antes supera: %s"
+
+msgid "★ победа   ★ быстрее %d мин   ★ в живых хотя бы %d%% армии"
+msgstr "★ victoria   ★ en menos de %d min   ★ al menos el %d%% del ejército con vida"
+
+msgid "Учебный штурм"
+msgstr "Asalto de entrenamiento"
+
+msgid "Небольшой отряд стоит у края долины, а за туманом — вражеский замок с двумя башнями и защитниками. Здесь вы научитесь выбирать бойцов, собирать их в группы и строить отряд, разведывать, сносить башни и брать крепость штурмом. Подсказки появятся по ходу боя."
+msgstr "Una pequeña compañía espera en el borde del valle y, tras la niebla, se alza un castillo enemigo con dos torres y defensores. Aquí aprenderás a elegir soldados, agruparlos y formarlos, explorar, derribar torres y tomar una fortaleza al asalto. Las pistas irán apareciendo durante el combate."
+
+msgid "Разрушить вражеский замок."
+msgstr "Destruir el castillo enemigo."
+
+msgid "Разведка боем"
+msgstr "Reconocimiento en fuerza"
+
+msgid "Денег и замка нет — только небольшой отряд с магом-целителем. По пути стоят три лагеря разбойников: разгромите лагерь, и пленные присоединятся к вам. За туманом — вражеская крепость. Её стережёт вождь со своими телохранителями: он намного сильнее любого бойца, так что берегите отряд и не лезьте к нему поодиночке."
+msgstr "No hay dinero ni castillo, solo una pequeña compañía con un mago sanador. Por el camino hay tres campamentos de bandidos: arrasa uno y sus prisioneros se unirán a ti. Tras la niebla se alza la fortaleza enemiga, guardada por un caudillo y sus guardaespaldas. Es mucho más fuerte que cualquier soldado, así que cuida de tu compañía y no vayas contra él de uno en uno."
+
+msgid "Разгромить лагеря и разрушить вражескую крепость."
+msgstr "Arrasar los campamentos y destruir la fortaleza enemiga."
+
+msgid "Вождь"
+msgstr "Caudillo"
+
+msgid "Лагерей разгромлено: %d из %d"
+msgstr "Campamentos arrasados: %d de %d"
+
+msgid "Лагерь разбойников разгромлен!"
+msgstr "¡Campamento de bandidos arrasado!"
+
+msgid "Пленные освобождены: к вам присоединились бойцы (%d)"
+msgstr "Prisioneros liberados: se os han unido soldados (%d)"
+
+msgid "Вождь пал! Его люди растеряны"
+msgstr "¡El caudillo ha caído! Sus hombres están desconcertados"
+
+msgid "Карта"
+msgstr "Mapa"
+
+msgid "Долина"
+msgstr "Valle"
+
+msgid "Озёрный лес"
+msgstr "Bosque del lago"
+
+msgid "У моста"
+msgstr "Junto al puente"
+
+msgid "Открытая долина: прямая дорога между замками и золото посередине."
+msgstr "Un valle abierto: un camino recto entre los castillos y oro en el centro."
+
+msgid "Посреди долины лежит большое озеро, а вдоль берегов густой лес. Пройти можно только южным берегом, там и сойдутся армии."
+msgstr "En mitad del valle hay un gran lago, con un espeso bosque a lo largo de sus orillas. Solo se puede pasar por la orilla sur, y allí se encontrarán los ejércitos."
+
+msgid "Широкая река делит долину пополам, и перейти её можно только по мосту посередине. Кто удержит мост, тот и хозяин долины."
+msgstr "Un ancho río divide el valle en dos y solo se cruza por el puente central. Quien domine el puente dominará el valle."
+
+msgid "Тут вода"
+msgstr "Aquí hay agua"

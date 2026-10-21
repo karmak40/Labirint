@@ -97,6 +97,14 @@ func _draw() -> void:
 		var heading := (bolt.mark.global_position + CHEST - bolt.at).normalized()
 		draw_line(here - heading * 9.0, here, BOLT, 2.0, true)
 
+func damage_faces() -> Array[Rect2]:
+	var w := footprint.x * 0.5 + 3.0
+	var top := MUZZLE.y + 6.0
+	return [Rect2(-w, top, w * 2.0, -top)]
+
+func debris_colors() -> Array[Color]:
+	return [STONE, STONE_DARK]
+
 func _draw_standing() -> void:
 	var w := footprint.x * 0.5 + 3.0
 	var top := MUZZLE.y + 6.0

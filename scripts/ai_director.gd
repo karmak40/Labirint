@@ -84,11 +84,13 @@ func _think() -> void:
 	if study != "" and not _saving_for_forge(me) and game.match_time - studied_at >= float(plan.get("study_pause", 0.0)):
 		game.research(team, study)
 	_rebalance(me)
+	_use_market(me)
 	_mend(me)
 	_hire(me)
 	_arm(me)
 	if _guard_home(me):
 		return
+	_explore(me)
 	_wage_war(me)
 
 # --- hiring -------------------------------------------------------------------
@@ -211,6 +213,12 @@ func _put_up(me: PlayerState) -> void:
 		if me.workers().size() >= _first_hands() and me.economy.can_afford(game.BUILDINGS["barracks"]["cost"]):
 			_build_near(me, "barracks", 230.0)
 		return
+	# a roof for the next men before they are wanted: without one nobody new
+	# can be taken on, and the wood is put by for it
+	if _wants_house(me):
+		if me.economy.can_afford(game.BUILDINGS["house"]["cost"]):
+			_build_near(me, "house", 240.0)
+		return
 	if _time_for_library(me):
 		_build_near(me, "library", 420.0)
 		return
@@ -277,6 +285,46 @@ func _mend(me: PlayerState) -> void:
 			game.assign_repairer(team)
 	elif at_it > 0:
 		game.release_repairer(team)
+
+## A house is wanted once the people it has are within HOUSE_AHEAD of the
+## roofs it has, unless one is already going up or the cap is reached.
+const HOUSE_AHEAD := 3
+
+func _wants_house(me: PlayerState) -> bool:
+	if me.base() == null or me.pop_cap() >= PlayerState.POP_MAX:
+		return false
+	for building in me.buildings:
+		if building is House and is_instance_valid(building) and building.is_alive() and not building.is_complete():
+			return false
+	return me.population() + HOUSE_AHEAD >= me.pop_cap()
+
+## A market, once the forge is up and there is plenty in store; then goods
+## that pile up are traded for what it is short of.
+const MARKET_GLUT := 150       ## how much of one it has to have before it trades it
+const MARKET_SHORT := 40       ## and how little of the other
+
+func _use_market(me: PlayerState) -> void:
+	if me.market() == null:
+		if me.has_forge_site() and not me.has_market_site() and not _wants_house(me) 				and me.economy.wood + me.economy.ore >= 200 and me.economy.can_afford(game.BUILDINGS["market"]["cost"]):
+			_build_near(me, "market", 380.0)
+		return
+	var e := me.economy
+	# and not at any price: once it has sold a good down it waits for it to recover
+	if e.wood >= MARKET_GLUT and e.ore < MARKET_SHORT and _fair(me, "wood_ore"):
+		game.trade(team, "wood_ore")
+	elif e.ore >= MARKET_GLUT and e.wood < MARKET_SHORT and _fair(me, "ore_wood"):
+		game.trade(team, "ore_wood")
+	elif _wants_gold(me) and e.gold < MARKET_SHORT and _fair(me, "wood_gold"):
+		if e.wood >= MARKET_GLUT * 1.5:
+			game.trade(team, "wood_gold")
+		elif e.ore >= MARKET_GLUT * 1.5:
+			game.trade(team, "ore_gold")
+
+## Whether a deal gives at least FAIR of what it usually does.
+const FAIR := 0.75
+
+func _fair(me: PlayerState, deal: String) -> bool:
+	return float(me.quote(deal)["get"].values()[0]) >= float(Market.usual(deal)) * FAIR
 
 ## Labourers are all alike, so a store piling up while the other runs dry
 ## is put right by moving a hand across, rather than by hiring another.
@@ -349,7 +397,7 @@ var sites := {}
 
 ## Rolls this head's habits for the match, within what its strategy allows.
 func _vary() -> void:
-	for kind in ["barracks", "library", "forge", "tower"]:
+	for kind in ["barracks", "library", "forge", "tower", "house", "market"]:
 		sites[kind] = Vector2(rng.randf_range(-50.0, 90.0), [-170.0, -90.0, 0.0, 90.0, 170.0][rng.randi() % 5])
 	# studies: a few neighbours swapped, never one before what it needs, and
 	# never one that costs gold past one that does not -- a head that starts on
@@ -396,12 +444,82 @@ static func _in_order(order: Array) -> bool:
 			return false
 	return true
 
+## The middle of the field: which way is "out" from our castle. The map is
+## known to everyone; where the enemy's castle stands is not.
 func _field_middle() -> float:
+	var ground: MapBuilder = game.field()
+	return ground.map.floor_size.x * 0.5 if ground != null and ground.map != null else 0.0
+
+# --- what it knows --------------------------------------------------------------
+
+## Its own sight (FogOfWar, quiet), or null where there is no fog: then it
+## knows what everyone knows.
+var vision: FogOfWar = null
+
+func _vision() -> FogOfWar:
+	if vision == null and game != null and game.field() != null:
+		vision = game.field().get_node_or_null("Vision%d" % team) as FogOfWar
+	return vision
+
+func _sees(point: Vector2) -> bool:
+	return _vision() == null or vision.sees_at(point)
+
+func _knows(point: Vector2) -> bool:
+	return _vision() == null or vision.knows_at(point)
+
+## Where to send the army: their castle once it has been found; until then,
+## out along the road to the edge of what it has seen, and on from there as
+## the men uncover more.
+func _war_goal(me: PlayerState) -> Vector2:
 	var foe: PlayerState = game.enemy_of(team)
-	var me: PlayerState = game.side(team)
-	if foe == null or me == null or foe.base() == null or me.base() == null:
-		return 0.0
-	return (foe.base().global_position.x + me.base().global_position.x) * 0.5
+	if foe != null and foe.base() != null and _knows(foe.base().global_position):
+		return Vector2.INF
+	var keep := me.base()
+	if keep == null or _vision() == null:
+		return Vector2.INF
+	var toward := 1.0 if keep.global_position.x < _field_middle() else -1.0
+	return vision.frontier(keep.global_position.x, keep.global_position.y, toward)
+
+var _sent_to := Vector2.INF
+
+## While the army is at home, one soldier goes to look over its own half of
+## the field wherever it has not seen yet (a camp, a seam, whoever is about),
+## and comes back when there is nothing left there to see.
+var scouting := false
+
+func _explore(me: PlayerState) -> void:
+	if attacking or defending or raiding != null or _vision() == null or me.base() == null:
+		if scouting:
+			scouting = false
+		return
+	var keep := me.base().global_position
+	var toward := 1.0 if keep.x < _field_middle() else -1.0
+	var goal := Vector2.INF
+	# along the castle's row, then the rows above and below it
+	for row in [keep.y, keep.y - 150.0, keep.y + 150.0]:
+		var spot := vision.frontier(keep.x, clampf(row, 60.0, game.field().map.floor_size.y - 60.0), toward)
+		if spot != Vector2.INF and absf(spot.x - keep.x) < absf(_field_middle() - keep.x):
+			goal = spot
+			break
+	if goal == Vector2.INF:
+		if scouting:
+			scouting = false
+			game.recall_scout(team)
+		return
+	if game.scout(team, goal):
+		scouting = true
+
+## Sends the wave at its goal (again, if the goal has moved on).
+func _send_wave(me: PlayerState) -> void:
+	var goal := _war_goal(me)
+	if goal == Vector2.INF:
+		if _sent_to != Vector2.ZERO:
+			_sent_to = Vector2.ZERO
+			game.attack_enemy_base(team)
+		return
+	if _sent_to == Vector2.INF or _sent_to == Vector2.ZERO or goal.distance_to(_sent_to) > 120.0:
+		_sent_to = goal
+		game.attack_move(team, goal)
 
 ## The soldier its army is shortest of, going by the mix its plan likes, of those
 ## it knows how to field -- and can arm: without a forge only clubs; clubs also
@@ -526,10 +644,9 @@ func _raid_camps(me: PlayerState) -> bool:
 		return true
 	return false
 
-## The nearest camp still guarded that lies nearer our keep than theirs.
+## The nearest camp it has found, still guarded, on its own half of the field.
 func _camp_to_clear(me: PlayerState) -> BanditCamp:
 	var keep := me.base()
-	var foe: PlayerState = game.enemy_of(team)
 	if keep == null:
 		return null
 	var best: BanditCamp = null
@@ -538,7 +655,10 @@ func _camp_to_clear(me: PlayerState) -> BanditCamp:
 		if camp == null or not camp.is_guarded():
 			continue
 		var ours := camp.global_position.distance_to(keep.global_position)
-		if foe != null and foe.base() != null and ours > camp.global_position.distance_to(foe.base().global_position):
+		# only a camp it has found, and on its own half of the field
+		if not _knows(camp.global_position):
+			continue
+		if absf(camp.global_position.x - keep.global_position.x) > absf(_field_middle() - keep.global_position.x):
 			continue
 		if best == null or ours < best.global_position.distance_to(keep.global_position):
 			best = camp
@@ -548,6 +668,8 @@ func _wage_war(me: PlayerState) -> void:
 	if not attacking and _raid_camps(me):
 		return
 	if attacking:
+		# on towards what it has not seen yet, or at their castle once found
+		_send_wave(me)
 		if _wave_left() <= int(plan["spent_at"]):
 			# spent -- though it takes a while to see it and sound the retreat
 			if spent_since < 0.0:
@@ -575,7 +697,8 @@ func _wage_war(me: PlayerState) -> void:
 func _launch(soldiers: Array[Unit]) -> void:
 	attacking = true
 	wave = soldiers
-	game.attack_enemy_base(team)
+	_sent_to = Vector2.INF
+	_send_wave(game.side(team))
 
 ## The nearest living soldier or labourer of any other side within the plan's
 ## guard distance of the keep's walls, seen the way anyone sees the field.
@@ -585,6 +708,9 @@ func _nearest_foe_to_keep(keep: Base) -> Node2D:
 	for node in get_tree().get_nodes_in_group("targets"):
 		var body := node as PlayerBody
 		if body == null or not body.is_alive() or not Team.hostile(team, body.team):
+			continue
+		# only someone its own men or walls can see
+		if not _sees(body.global_position):
 			continue
 		var distance := keep.nearest_point(body.global_position).distance_to(body.global_position)
 		if distance < best_distance:

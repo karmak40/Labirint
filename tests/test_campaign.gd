@@ -13,12 +13,13 @@ func begin() -> void:
 	time_limit = 60 * 120
 	campaign = root.get_node("Campaign")
 	check(campaign.save_path == CAMPAIGN_FILE, "campaign progress is kept in the test's own file")
-	check(campaign.is_open(0) and not campaign.is_open(1) and not campaign.is_open(2), "only the first room is open to begin with")
+	check(campaign.is_open(0) and campaign.is_open(1) and not campaign.is_open(2) and not campaign.is_open(3),
+		"the training room and the first room are open to begin with, nothing after")
 
 func step() -> bool:
 	var gs := game()
 	if frame == 1 and stage == 0 and not playing():
-		campaign.start(0)
+		campaign.start(1)
 	match stage:
 		0:
 			if not playing() or frame < 5:
@@ -37,13 +38,13 @@ func step() -> bool:
 			if frame < 3:
 				return false
 			check(gs.phase == gs.Phase.WON, "knocking their castle down wins the room")
-			check(campaign.last_earned == 3 and campaign.stars_of(0) == 3, "a quick win with the castle whole is three stars", campaign.last_earned)
-			check(campaign.is_open(1), "and opens the second room")
+			check(campaign.last_earned == 3 and campaign.stars_of(1) == 3, "a quick win with the castle whole is three stars", campaign.last_earned)
+			check(campaign.is_open(2), "and opens the second room")
 			campaign.load_from(CAMPAIGN_FILE)
-			check(campaign.stars_of(0) == 3, "the stars are still there read back from disk")
+			check(campaign.stars_of(1) == 3, "the stars are still there read back from disk")
 			var hud := current_scene.get_node("Hud")
 			check(hud.next_button.visible and hud.overlay_title.text.contains("★★★"), "the end screen shows the stars and a way on", hud.overlay_title.text)
-			campaign.current = 0
+			campaign.current = 1
 			hud.next_button.pressed.emit()
 			stage = 2
 			frame = 0
@@ -51,7 +52,7 @@ func step() -> bool:
 			if not playing() or frame < 10:
 				return false
 			var map: MapData = current_scene.map
-			check(map.title == "Золотое ущелье" and campaign.current == 1, "«Следующая комната» went on to the gorge")
+			check(map.title == "Золотое ущелье" and campaign.current == 2, "«Следующая комната» went on to the gorge")
 			check(get_nodes_in_group("boulders").size() == map.boulder_positions.size() and map.boulder_positions.size() > 20,
 				"the gorge's walls of rock are standing", get_nodes_in_group("boulders").size())
 			var towers := 0
@@ -69,7 +70,7 @@ func step() -> bool:
 				"%d points, down to y=%.0f" % [way.size(), lowest])
 			# on to the siege
 			campaign.stars["gorge"] = 1
-			campaign.start(2)
+			campaign.start(3)
 			stage = 3
 			frame = 0
 		3:

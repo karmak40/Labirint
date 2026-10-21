@@ -44,6 +44,10 @@ var _image: Image
 var _texture: ImageTexture
 var _floor := Vector2.ONE
 var _look_left := 0.0
+## A computer side's own sight: the same reckoning, nothing drawn, nothing
+## hidden, and not the one the human's screen asks (see AIDirector.vision).
+var quiet := false
+const QUIET_LOOK := 0.5        ## a head does not need to look round as often
 
 func setup(floor_size: Vector2, side: int) -> void:
 	team = side
@@ -56,11 +60,14 @@ func setup(floor_size: Vector2, side: int) -> void:
 	seen.fill(0)
 	shade.resize(n)
 	shade.fill(UNSEEN)
+	if quiet:
+		return
 	_image = Image.create(size_cells.x, size_cells.y, false, Image.FORMAT_RGBA8)
 	_texture = ImageTexture.create_from_image(_image)
 
 func _enter_tree() -> void:
-	current = self
+	if not quiet:
+		current = self
 
 func _exit_tree() -> void:
 	if current == self:
@@ -75,8 +82,27 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_look_left -= delta
 	if _look_left <= 0.0:
-		_look_left = LOOK
+		_look_left = QUIET_LOOK if quiet else LOOK
 		_look(false)
+
+## Whether this side sees `point` right now.
+func sees_at(point: Vector2) -> bool:
+	return seen[_cell(point)] == 1
+
+## Whether this side has ever seen `point`.
+func knows_at(point: Vector2) -> bool:
+	return explored[_cell(point)] == 1
+
+## The nearest point it has not yet seen, going along row `y` from `from_x`
+## towards `toward` (+1 or -1): where to go to find out more. INF for none.
+func frontier(from_x: float, y: float, toward: float) -> Vector2:
+	var x := from_x
+	while x >= 0.0 and x <= _floor.x:
+		var point := Vector2(x, y)
+		if not knows_at(point):
+			return point
+		x += toward * CELL
+	return Vector2.INF
 
 func _cell(point: Vector2) -> int:
 	var x := clampi(int(point.x / CELL), 0, size_cells.x - 1)
@@ -124,6 +150,8 @@ func _look(at_once: bool) -> void:
 		if not thing.has_method("is_alive") or not thing.is_alive():
 			continue
 		_light(thing.global_position, vision_of(thing))
+	if quiet:
+		return
 	_hide_the_unseen()
 	_paint(at_once)
 
@@ -164,5 +192,7 @@ func _paint(at_once: bool) -> void:
 	queue_redraw()
 
 func _draw() -> void:
+	if quiet:
+		return
 	# a little past the edges, so the smoothing does not leave a lit rim
 	draw_texture_rect(_texture, Rect2(Vector2.ZERO, Vector2(size_cells) * CELL), false)
